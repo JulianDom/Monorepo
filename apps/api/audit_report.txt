@@ -1,0 +1,381 @@
+================================================================================
+CERVAK FRAMEWORK - ARCHITECTURE AUDIT REPORT
+Generated: 2026-01-12T23:05:47.031Z
+================================================================================
+
+DIRECTORY STRUCTURE
+----------------------------------------
+src/
+@core/
+application/
+dto/
+└── index.ts
+ports/
+repositories/
+├── base.repository.interface.ts
+└── index.ts
+├── index.ts
+└── README.md
+services/
+├── base.service.ts
+└── index.ts
+use-cases/
+├── index.ts
+└── README.md
+└── index.ts
+domain/
+entities/
+├── index.ts
+└── README.md
+enums/
+└── index.ts
+value-objects/
+├── index.ts
+└── README.md
+└── index.ts
+└── index.ts
+@infra/
+cache/
+└── index.ts
+database/
+prisma/
+├── index.ts
+├── prisma.module.ts
+└── prisma.service.ts
+repositories/
+├── base.repository.ts
+├── index.ts
+└── README.md
+└── index.ts
+external-services/
+firebase/
+└── index.ts
+google-maps/
+└── index.ts
+mercadopago/
+├── index.ts
+└── README.md
+└── index.ts
+providers/
+files/
+├── file.service.ts
+└── index.ts
+maps/
+├── index.ts
+└── maps.service.ts
+payments/
+├── index.ts
+└── mercadopago.service.ts
+├── index.ts
+└── providers.module.ts
+queues/
+processors/
+├── index.ts
+└── notification.processor.ts
+├── index.ts
+└── queue.module.ts
+security/
+authentication/
+decorators/
+├── current-user.decorator.ts
+├── index.ts
+└── public.decorator.ts
+├── index.ts
+├── jwt-auth.guard.ts
+├── jwt.strategy.ts
+└── token.service.ts
+biometrics/
+├── biometric.service.ts
+└── index.ts
+encryption/
+└── index.ts
+throttling/
+├── index.ts
+└── throttler.config.ts
+├── auth.module.ts
+└── index.ts
+websockets/
+└── index.ts
+└── index.ts
+@presentation/
+controllers/
+├── index.ts
+└── README.md
+decorators/
+└── index.ts
+dto/
+└── index.ts
+filters/
+├── global-exception.filter.ts
+└── index.ts
+gateways/
+chat/
+├── chat.gateway.ts
+├── chat.module.ts
+├── chat.service.ts
+└── index.ts
+└── index.ts
+guards/
+decorators/
+├── index.ts
+├── roles.decorator.ts
+└── skip-throttle.decorator.ts
+├── index.ts
+└── roles.guard.ts
+interceptors/
+└── index.ts
+middlewares/
+└── index.ts
+pipes/
+└── index.ts
+└── index.ts
+@shared/
+config/
+└── index.ts
+constants/
+├── error-codes.constant.ts
+└── index.ts
+exceptions/
+├── domain.exception.ts
+└── index.ts
+types/
+├── auth.types.ts
+├── chat.types.ts
+├── entity.types.ts
+├── file.types.ts
+├── index.ts
+├── maps.types.ts
+├── pagination.types.ts
+├── payment.types.ts
+└── response.types.ts
+utils/
+└── index.ts
+validators/
+└── index.ts
+└── index.ts
+├── app.controller.ts
+├── app.module.ts
+├── app.service.ts
+└── main.ts
+
+prisma/
+migrations/
+20260112130803_framework1/
+└── migration.sql
+└── migration_lock.toml
+├── prisma.config.js
+├── prisma.config.ts
+├── SCHEMA_DIAGRAM.md
+├── SCHEMA_DOCUMENTATION.md
+├── schema.prisma
+└── seed.ts
+
+
+EXPORTED SIGNATURES BY FILE
+----------------------------------------
+
+FILE: src\@core\application\ports\repositories\base.repository.interface.ts
+  L19: export interface IBaseRepository<T, CreateDto = Partial<T>, UpdateDto = Partial<T>> {...}
+
+FILE: src\@core\application\services\base.service.ts
+  L20: export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial<T>> {...}
+
+FILE: src\@infra\database\prisma\prisma.module.ts
+  L6: @Module({...}
+  L11: export class PrismaModule {...}
+
+FILE: src\@infra\database\prisma\prisma.service.ts
+  L13: @Injectable()
+  L14: export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {...}
+
+FILE: src\@infra\database\repositories\base.repository.ts
+  L24: export abstract class PrismaRepository<T, CreateDto = Partial<T>, UpdateDto = Partial<T>>
+  L25: implements IBaseRepository<T, CreateDto, UpdateDto>
+
+FILE: src\@infra\providers\files\file.service.ts
+  L27: @Injectable()
+  L28: export class FileService {...}
+  L425: async exportCsv<T extends Record<string, any>>(
+  L456: async saveCsvToFile<T extends Record<string, any>>(
+
+FILE: src\@infra\providers\maps\maps.service.ts
+  L30: @Injectable()
+  L31: export class MapsService {...}
+
+FILE: src\@infra\providers\payments\mercadopago.service.ts
+  L20: @Injectable()
+  L21: export class MercadoPagoService {...}
+
+FILE: src\@infra\providers\providers.module.ts
+  L14: @Module({...}
+  L19: export class ProvidersModule {...}
+
+FILE: src\@infra\queues\processors\notification.processor.ts
+  L31: @Processor('notifications')
+  L32: export class NotificationProcessor {...}
+
+FILE: src\@infra\queues\queue.module.ts
+  L17: @Module({...}
+  L54: export class QueueModule {...}
+
+FILE: src\@infra\security\auth.module.ts
+  L24: @Module({...}
+  L45: export class AuthModule {...}
+
+FILE: src\@infra\security\authentication\jwt-auth.guard.ts
+  L13: @Injectable()
+  L14: export class JwtAuthGuard extends AuthGuard('jwt') {...}
+
+FILE: src\@infra\security\authentication\jwt.strategy.ts
+  L14: @Injectable()
+  L15: export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {...}
+
+FILE: src\@infra\security\authentication\token.service.ts
+  L13: @Injectable()
+  L14: export class TokenService {...}
+
+FILE: src\@infra\security\biometrics\biometric.service.ts
+  L39: @Injectable()
+  L40: export class BiometricService {...}
+
+FILE: src\@presentation\filters\global-exception.filter.ts
+  L27: export class GlobalExceptionFilter implements ExceptionFilter {...}
+
+FILE: src\@presentation\gateways\chat\chat.gateway.ts
+  L30: interface AuthenticatedSocket extends Socket {...}
+  L51: @WebSocketGateway({...}
+  L59: export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {...}
+  L365: emitToUser<K extends keyof ServerToClientEvents>(
+
+FILE: src\@presentation\gateways\chat\chat.module.ts
+  L15: @Module({...}
+  L30: export class ChatModule {...}
+
+FILE: src\@presentation\gateways\chat\chat.service.ts
+  L23: @Injectable()
+  L24: export class ChatService {...}
+
+FILE: src\@presentation\guards\roles.guard.ts
+  L19: @Injectable()
+  L20: export class RolesGuard implements CanActivate {...}
+
+FILE: src\@shared\constants\error-codes.constant.ts
+  L31: export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+FILE: src\@shared\exceptions\domain.exception.ts
+  L6: export class DomainException extends HttpException {...}
+  L20: export class EntityNotFoundException extends DomainException {...}
+  L34: export class EntityDuplicatedException extends DomainException {...}
+  L48: export class ForbiddenOperationException extends DomainException {...}
+  L57: export class BusinessValidationException extends DomainException {...}
+  L66: export class DatabaseException extends DomainException {...}
+
+FILE: src\@shared\types\auth.types.ts
+  L5: export enum ActorType {...}
+  L10: export interface JwtPayload {...}
+  L19: export interface TokenPair {...}
+  L24: export interface AuthenticatedActor {...}
+  L31: export interface BiometricCredential {...}
+  L40: export type AuthenticatorTransport =
+
+FILE: src\@shared\types\chat.types.ts
+  L7: export enum ConversationType {...}
+  L13: export enum MemberType {...}
+  L18: export enum MessageType {...}
+  L27: export interface SendMessagePayload {...}
+  L38: export interface ChatMessage {...}
+  L59: export interface MessageAttachment {...}
+  L69: export interface TypingPayload {...}
+  L77: export interface ReadReceiptPayload {...}
+  L85: export interface UserPresencePayload {...}
+  L95: export interface AuthenticatedSocket {...}
+  L106: export interface JoinRoomResponse {...}
+  L115: export interface ServerToClientEvents {...}
+  L130: export interface ClientToServerEvents {...}
+
+FILE: src\@shared\types\entity.types.ts
+  L5: export interface BaseEntity {...}
+  L12: export interface SoftDeletable {...}
+  L16: export type CreateInput<T> = Omit<T, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
+  L17: export type UpdateInput<T> = Partial<CreateInput<T>>;
+  L19: export interface FindOptions {...}
+  L23: export interface WhereCondition {...}
+
+FILE: src\@shared\types\file.types.ts
+  L5: export interface PaymentReceiptData {...}
+  L29: export interface ReceiptItem {...}
+  L36: export interface CompanyInfo {...}
+  L46: export interface CsvImportOptions<T> {...}
+  L55: export interface CsvExportOptions {...}
+  L61: export interface ImportResult<T> {...}
+  L70: export interface ImportError {...}
+  L77: export interface ExportResult {...}
+
+FILE: src\@shared\types\maps.types.ts
+  L5: export interface Coordinates {...}
+  L10: export interface GeocodingResult {...}
+  L18: export interface AddressComponent {...}
+  L24: export interface ReverseGeocodingResult {...}
+  L31: export interface DistanceResult {...}
+  L44: export interface PlaceAutocompleteResult {...}
+  L52: export interface PlaceDetails {...}
+
+FILE: src\@shared\types\pagination.types.ts
+  L5: export interface PaginationParams {...}
+  L12: export interface PaginationMeta {...}
+  L21: export interface PaginatedResult<T> {...}
+
+FILE: src\@shared\types\payment.types.ts
+  L5: export enum PaymentStatus {...}
+  L17: export interface PaymentItem {...}
+  L28: export interface PaymentPayer {...}
+  L47: export interface CreatePreferenceDto {...}
+  L65: export interface PreferenceResponse {...}
+  L73: export interface WebhookPayload {...}
+  L86: export interface PaymentInfo {...}
+
+FILE: src\@shared\types\response.types.ts
+  L5: export interface ApiResponse<T = unknown> {...}
+  L12: export interface ApiErrorResponse {...}
+  L23: export interface ValidationErrorDetail {...}
+  L29: export interface ApiValidationErrorResponse extends ApiErrorResponse {...}
+
+FILE: src\app.controller.ts
+  L6: @Controller()
+  L7: export class AppController {...}
+
+FILE: src\app.module.ts
+  L14: @Module({...}
+  L37: export class AppModule {...}
+
+FILE: src\app.service.ts
+  L3: @Injectable()
+  L4: export class AppService {...}
+
+
+ARCHITECTURE ANALYSIS
+----------------------------------------
+
+@core/ Layer:
+  - Interfaces: 1
+  - Classes: 1
+  - Types: 0
+
+@infra/ Layer:
+  - Injectable Services: 8
+  - Repositories: 2
+  - Modules: 4
+
+@presentation/ Layer:
+  - Controllers: 0
+  - Guards: 1
+  - WebSocket Gateways: 1
+
+@shared/ Layer:
+  - Types/Interfaces: 50
+
+
+SUMMARY
+----------------------------------------
+Total files analyzed: 34
+Total signatures found: 110

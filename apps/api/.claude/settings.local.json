@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"\nconst fs = require\\(''fs''\\);\nconst path = require\\(''path''\\);\nconst configPath = path.join\\(process.env.USERPROFILE, ''.claude.json''\\);\nconst config = JSON.parse\\(fs.readFileSync\\(configPath, ''utf8''\\)\\);\n\n// Add Context7 MCP server to the project\nconst projectPath = ''C:/Users/Julian/Documents/Cervak/Framework 1'';\nif \\(config.projects && config.projects[projectPath]\\) {\n  config.projects[projectPath].mcpServers = {\n    ''context7'': {\n      ''command'': ''npx'',\n      ''args'': [''-y'', ''@context7/mcp-server''],\n      ''env'': {\n        ''CONTEXT7_API_KEY'': ''ctx7sk-3d86eaf1-3fbd-476c-afbf-9b980b7ebf18''\n      }\n    }\n  };\n}\n\nfs.writeFileSync\\(configPath, JSON.stringify\\(config, null, 2\\)\\);\nconsole.log\\(''MCP server configured successfully''\\);\n\")",
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(cd:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm build:*)"
+    ]
+  }
+}

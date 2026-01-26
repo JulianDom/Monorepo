@@ -1,0 +1,15 @@
+{
+  "name": "framework1",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "api:dev": "pnpm --filter api dev",
+    "admin:dev": "pnpm --filter admin dev"
+  },
+  "devDependencies": {
+    "turbo": "latest",
+    "typescript": "^5.0.0"
+  }
+}
