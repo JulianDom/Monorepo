@@ -104,11 +104,11 @@ export default function LoginPage() {
         </div>
 
         {/* Demo credentials */}
-        <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-4">
-          <p className="text-sm text-blue-900 font-semibold mb-2">
+        <div className="mt-4 rounded-lg bg-muted border border-border p-4">
+          <p className="text-sm text-foreground font-semibold mb-2">
             Credenciales de prueba:
           </p>
-          <p className="text-xs text-blue-800">
+          <p className="text-xs text-muted-foreground">
             Email: admin@example.com
             <br />
             Contraseña: cualquier contraseña

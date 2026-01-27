@@ -356,19 +356,19 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
 
       {/* Additional Info */}
       {mode === 'create' && (
-        <div className="max-w-2xl rounded-lg bg-blue-50 border border-blue-200 p-4">
-          <h4 className="font-medium text-blue-900 mb-2">Proceso de alta</h4>
-          <ul className="space-y-1 text-sm text-blue-800">
+        <div className="max-w-2xl rounded-lg bg-muted border border-border p-4">
+          <h4 className="font-medium text-foreground mb-2">Proceso de alta</h4>
+          <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
-              <span className="text-blue-600">•</span>
+              <span className="text-muted-foreground">•</span>
               <span>Se creará la cuenta con los datos proporcionados</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-600">•</span>
+              <span className="text-muted-foreground">•</span>
               <span>El administrador recibirá las credenciales de acceso</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-600">•</span>
+              <span className="text-muted-foreground">•</span>
               <span>Una vez creada la cuenta, podrá acceder al sistema inmediatamente</span>
             </li>
           </ul>
