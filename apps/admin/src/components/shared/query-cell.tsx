@@ -1,107 +1,87 @@
-'use client';
-
-import { type ReactNode } from 'react';
-import { type UseQueryResult } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
+import { ReactNode } from 'react';
+import { UseQueryResult } from '@tanstack/react-query';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 interface QueryCellProps<TData> {
-  /** Resultado de useQuery */
   query: UseQueryResult<TData, Error>;
-  /** Render function cuando los datos están disponibles */
   children: (data: TData) => ReactNode;
-  /** Componente de loading personalizado */
-  loadingComponent?: ReactNode;
-  /** Componente de error personalizado */
-  errorComponent?: ReactNode;
-  /** Clase CSS adicional para el contenedor */
-  className?: string;
+  loadingFallback?: ReactNode;
+  errorFallback?: (error: Error) => ReactNode;
+  emptyFallback?: ReactNode;
+  isEmpty?: (data: TData) => boolean;
 }
 
 /**
- * Componente HOC para manejar estados de React Query
- * - Loading: Muestra 3 Skeletons
- * - Error: Muestra Alert con mensaje de error
- * - Success: Renderiza children con los datos
+ * Wrapper para manejar estados de queries de React Query
+ * Maneja loading, error y empty states de forma consistente
  */
 export function QueryCell<TData>({
   query,
   children,
-  loadingComponent,
-  errorComponent,
-  className,
+  loadingFallback,
+  errorFallback,
+  emptyFallback,
+  isEmpty,
 }: QueryCellProps<TData>) {
-  const { data, isLoading, isError, error, refetch, isFetching } = query;
+  const { data, isLoading, isError, error } = query;
 
-  // Estado de carga
+  // Loading state
   if (isLoading) {
     return (
-      loadingComponent || (
-        <div className={cn('space-y-4', className)}>
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
+      loadingFallback || (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Cargando...</p>
+          </div>
         </div>
       )
     );
   }
 
-  // Estado de error
+  // Error state
   if (isError) {
     return (
-      errorComponent || (
-        <Alert variant="destructive" className={className}>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>{error?.message || 'Ha ocurrido un error inesperado'}</span>
-            <button
-              onClick={() => refetch()}
-              className="inline-flex items-center gap-1 text-sm underline hover:no-underline"
-              disabled={isFetching}
-            >
-              <RefreshCw
-                className={cn('h-3 w-3', isFetching && 'animate-spin')}
-              />
-              Reintentar
-            </button>
-          </AlertDescription>
-        </Alert>
+      errorFallback?.(error as Error) || (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3 max-w-md text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Error al cargar los datos</h3>
+              <p className="text-sm text-muted-foreground">
+                {error?.message || 'Ocurrió un error inesperado'}
+              </p>
+            </div>
+          </div>
+        </div>
       )
     );
   }
 
-  // Estado de éxito - renderizar children con datos
-  if (data !== undefined) {
-    return <>{children(data)}</>;
+  // Empty state
+  if (isEmpty && data && isEmpty(data)) {
+    return emptyFallback || null;
   }
 
-  // Estado por defecto (no debería llegar aquí)
-  return null;
+  // Success state
+  return <>{data ? children(data) : null}</>;
 }
 
 /**
- * Variantes de loading para diferentes casos de uso
+ * Ejemplo de uso:
+ * 
+ * const usersQuery = useQuery({
+ *   queryKey: ['users'],
+ *   queryFn: () => userService.list()
+ * });
+ * 
+ * <QueryCell
+ *   query={usersQuery}
+ *   isEmpty={(data) => data.data.length === 0}
+ *   emptyFallback={<EmptyUsers />}
+ * >
+ *   {(data) => <UserList users={data.data} />}
+ * </QueryCell>
  */
-export function QueryCellTableLoading({ rows = 5 }: { rows?: number }) {
-  return (
-    <div className="space-y-2">
-      <Skeleton className="h-10 w-full" />
-      {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-14 w-full" />
-      ))}
-    </div>
-  );
-}
-
-export function QueryCellCardLoading({ cards = 3 }: { cards?: number }) {
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: cards }).map((_, i) => (
-        <Skeleton key={i} className="h-32 w-full rounded-lg" />
-      ))}
-    </div>
-  );
-}

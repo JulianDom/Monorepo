@@ -1,134 +1,120 @@
 'use client';
 
 import { useState } from 'react';
-import { z } from 'zod';
-import { Loader2, LogIn } from 'lucide-react';
-import { useAuth } from '@/providers';
-import { useStandardForm } from '@/hooks';
+import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { APP } from '@/config';
-
-// Schema de validación
-const loginSchema = z.object({
-  email: z.string().email('Ingresa un email válido'),
-  password: z.string().min(1, 'La contraseña es requerida'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import { ShieldCheck, Mail, Lock, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { login, isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const form = useStandardForm<LoginFormData>({
-    schema: loginSchema,
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
 
-  const onSubmit = form.handleSubmit(async (data) => {
-    setIsLoading(true);
-    setError(null);
+    if (!email || !password) {
+      setError('Por favor complete todos los campos');
+      return;
+    }
 
     try {
-      await login(data);
-    } catch (err: unknown) {
-      // El error de credenciales inválidas viene del interceptor
-      // pero podemos mostrar un mensaje más específico aquí
-      const errorMessage =
-        (err as { response?: { data?: { error?: { message?: string } } } })
-          ?.response?.data?.error?.message || 'Credenciales inválidas';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      await login({ email, password });
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión');
     }
-  });
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">{APP.NAME}</CardTitle>
-          <CardDescription>
-            Ingresa tus credenciales para acceder al panel
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            {/* Error general */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-card border border-border rounded-lg shadow-lg p-8">
+          {/* Header */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground mb-4">
+              <ShieldCheck className="h-8 w-8" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground text-center">
+              Sistema de Relevamiento
+            </h1>
+            <p className="text-muted-foreground text-sm text-center mt-2">
+              Ingresa tus credenciales para acceder
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                <p className="text-sm text-destructive flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  {error}
+                </p>
               </div>
             )}
 
-            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Correo electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@ejemplo.com"
-                autoComplete="email"
-                disabled={isLoading}
-                {...form.register('email')}
-                className={form.errors.email ? 'border-destructive' : ''}
-              />
-              {form.errors.email && (
-                <p className="text-sm text-destructive">
-                  {form.errors.email.message}
-                </p>
-              )}
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
-            {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                disabled={isLoading}
-                {...form.register('password')}
-                className={form.errors.password ? 'border-destructive' : ''}
-              />
-              {form.errors.password && (
-                <p className="text-sm text-destructive">
-                  {form.errors.password.message}
-                </p>
-              )}
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
-            {/* Submit */}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  Iniciar sesión
-                </>
-              )}
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-muted-foreground">
+              Sistema de Relevamiento de Precios v1.0
+            </p>
+          </div>
+        </div>
+
+        {/* Demo credentials */}
+        <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-4">
+          <p className="text-sm text-blue-900 font-semibold mb-2">
+            Credenciales de prueba:
+          </p>
+          <p className="text-xs text-blue-800">
+            Email: admin@example.com
+            <br />
+            Contraseña: cualquier contraseña
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

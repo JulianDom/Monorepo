@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
+import { ROUTES } from '@/config';
 
-export default function Home() {
-  // Redirigir a dashboard - el middleware se encarga de la autenticación
-  redirect('/dashboard');
+/**
+ * Página principal - redirige al dashboard
+ */
+export default function HomePage() {
+  redirect(ROUTES.DASHBOARD);
 }

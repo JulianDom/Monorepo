@@ -1,175 +1,110 @@
 'use client';
 
-import { useQueryStates } from 'nuqs';
-import { useCallback, useMemo, useTransition } from 'react';
-import { tableSearchParams, type ApiFilterParams } from '@/lib/search-params';
-import { useDebounce } from './use-debounce';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useCallback, useMemo } from 'react';
+import { PAGINATION } from '@/config/constants';
+import { updateSearchParams, getSearchParam, getSearchParamNumber } from '@/lib/search-params';
 
-interface UseStandardTableOptions {
-  /** Delay del debounce para search (default: 300ms) */
-  debounceMs?: number;
-  /** Límite por defecto de items por página */
-  defaultLimit?: number;
+export interface TableState {
+  page: number;
+  pageSize: number;
+  search: string;
+  sortField: string;
+  sortOrder: 'asc' | 'desc';
+  filters: Record<string, string>;
 }
 
-interface UseStandardTableReturn {
-  // Estado de paginación
-  page: number;
+export interface UseStandardTableReturn extends TableState {
   setPage: (page: number) => void;
-  limit: number;
-  setLimit: (limit: number) => void;
-
-  // Estado de búsqueda
-  search: string;
+  setPageSize: (pageSize: number) => void;
   setSearch: (search: string) => void;
-  debouncedSearch: string;
-
-  // Estado de ordenamiento
-  sortBy: string;
-  setSortBy: (sortBy: string) => void;
-  sortOrder: 'asc' | 'desc';
-  setSortOrder: (order: 'asc' | 'desc') => void;
-  toggleSortOrder: () => void;
-
-  // Parámetros listos para API
-  filterParams: ApiFilterParams;
-
-  // Estado de transición (para loading states)
-  isPending: boolean;
-
-  // Utilidades
+  setSorting: (field: string, order?: 'asc' | 'desc') => void;
+  setFilter: (key: string, value: string) => void;
+  setFilters: (filters: Record<string, string>) => void;
   resetFilters: () => void;
-  goToFirstPage: () => void;
+  resetAll: () => void;
 }
 
 /**
- * Hook maestro para manejo de tablas sincronizadas con URL
- *
- * @example
- * ```tsx
- * const { filterParams, page, setPage, search, setSearch } = useStandardTable();
- *
- * const query = useQuery({
- *   queryKey: ['users', filterParams],
- *   queryFn: () => fetchUsers(filterParams),
- * });
- * ```
+ * Hook para manejar el estado de tablas con URL state
+ * Sincroniza automáticamente filtros, búsqueda, paginación y ordenamiento con la URL
  */
-export function useStandardTable(
-  options: UseStandardTableOptions = {}
-): UseStandardTableReturn {
-  const { debounceMs = 300 } = options;
+export function useStandardTable(config?: {
+  defaultPageSize?: number;
+  defaultSortField?: string;
+  defaultSortOrder?: 'asc' | 'desc';
+}): UseStandardTableReturn {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const [isPending, startTransition] = useTransition();
+  // Estado actual desde URL
+  const currentState = useMemo<TableState>(() => ({
+    page: getSearchParamNumber(searchParams, 'page', PAGINATION.DEFAULT_PAGE),
+    pageSize: getSearchParamNumber(searchParams, 'pageSize', config?.defaultPageSize || PAGINATION.DEFAULT_PAGE_SIZE),
+    search: getSearchParam(searchParams, 'search', ''),
+    sortField: getSearchParam(searchParams, 'sortField', config?.defaultSortField || ''),
+    sortOrder: (getSearchParam(searchParams, 'sortOrder', config?.defaultSortOrder || 'asc') as 'asc' | 'desc'),
+    filters: Object.fromEntries(
+      Array.from(searchParams.entries()).filter(([key]) => 
+        !['page', 'pageSize', 'search', 'sortField', 'sortOrder'].includes(key)
+      )
+    ),
+  }), [searchParams, config]);
 
-  // Estado sincronizado con URL
-  const [params, setParams] = useQueryStates(tableSearchParams, {
-    history: 'push',
-    shallow: false, // Permite que Server Components lean los params
-    startTransition,
-  });
+  // Función helper para actualizar URL
+  const updateUrl = useCallback((updates: Record<string, any>) => {
+    const newParams = updateSearchParams(searchParams, updates);
+    router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+  }, [searchParams, router, pathname]);
 
-  const { page, limit, search, sortBy, sortOrder } = params;
+  // Setters
+  const setPage = useCallback((page: number) => {
+    updateUrl({ page });
+  }, [updateUrl]);
 
-  // Search con debounce
-  const debouncedSearch = useDebounce(search, debounceMs);
+  const setPageSize = useCallback((pageSize: number) => {
+    updateUrl({ pageSize, page: 1 }); // Reset a primera página
+  }, [updateUrl]);
 
-  // Setters individuales
-  const setPage = useCallback(
-    (newPage: number) => {
-      setParams({ page: newPage });
-    },
-    [setParams]
-  );
+  const setSearch = useCallback((search: string) => {
+    updateUrl({ search, page: 1 }); // Reset a primera página
+  }, [updateUrl]);
 
-  const setLimit = useCallback(
-    (newLimit: number) => {
-      // Resetear a página 1 cuando cambia el límite
-      setParams({ limit: newLimit, page: 1 });
-    },
-    [setParams]
-  );
+  const setSorting = useCallback((field: string, order?: 'asc' | 'desc') => {
+    const newOrder = order || (currentState.sortField === field && currentState.sortOrder === 'asc' ? 'desc' : 'asc');
+    updateUrl({ sortField: field, sortOrder: newOrder, page: 1 });
+  }, [updateUrl, currentState]);
 
-  const setSearch = useCallback(
-    (newSearch: string) => {
-      // Resetear a página 1 cuando cambia la búsqueda
-      setParams({ search: newSearch, page: 1 });
-    },
-    [setParams]
-  );
+  const setFilter = useCallback((key: string, value: string) => {
+    updateUrl({ [key]: value, page: 1 }); // Reset a primera página
+  }, [updateUrl]);
 
-  const setSortBy = useCallback(
-    (newSortBy: string) => {
-      setParams({ sortBy: newSortBy });
-    },
-    [setParams]
-  );
+  const setFilters = useCallback((filters: Record<string, string>) => {
+    updateUrl({ ...filters, page: 1 });
+  }, [updateUrl]);
 
-  const setSortOrder = useCallback(
-    (newOrder: 'asc' | 'desc') => {
-      setParams({ sortOrder: newOrder });
-    },
-    [setParams]
-  );
-
-  const toggleSortOrder = useCallback(() => {
-    setParams({ sortOrder: sortOrder === 'asc' ? 'desc' : 'asc' });
-  }, [setParams, sortOrder]);
-
-  // Utilidades
   const resetFilters = useCallback(() => {
-    setParams({
-      page: 1,
-      limit: 10,
-      search: '',
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+    const updates: Record<string, any> = { page: 1 };
+    Object.keys(currentState.filters).forEach(key => {
+      updates[key] = undefined;
     });
-  }, [setParams]);
+    updateUrl(updates);
+  }, [updateUrl, currentState.filters]);
 
-  const goToFirstPage = useCallback(() => {
-    setParams({ page: 1 });
-  }, [setParams]);
-
-  // Parámetros listos para enviar a la API
-  const filterParams: ApiFilterParams = useMemo(
-    () => ({
-      page,
-      limit,
-      search: debouncedSearch || undefined, // No enviar string vacío
-      sortBy,
-      sortOrder,
-    }),
-    [page, limit, debouncedSearch, sortBy, sortOrder]
-  );
+  const resetAll = useCallback(() => {
+    router.push(pathname);
+  }, [router, pathname]);
 
   return {
-    // Paginación
-    page,
+    ...currentState,
     setPage,
-    limit,
-    setLimit,
-
-    // Búsqueda
-    search,
+    setPageSize,
     setSearch,
-    debouncedSearch,
-
-    // Ordenamiento
-    sortBy,
-    setSortBy,
-    sortOrder,
-    setSortOrder,
-    toggleSortOrder,
-
-    // API params
-    filterParams,
-
-    // Estado
-    isPending,
-
-    // Utilidades
+    setSorting,
+    setFilter,
+    setFilters,
     resetFilters,
-    goToFirstPage,
+    resetAll,
   };
 }

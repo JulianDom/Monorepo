@@ -1,43 +1,40 @@
 /**
- * Tipos para respuestas de la API
- * Basados en la estructura de Clean Architecture del backend
+ * Tipos compartidos para respuestas de API
  */
 
-// Estructura de error de la API
-export interface ApiError {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
+export interface ApiResponse<T = any> {
+  data: T;
+  message?: string;
+  success: boolean;
 }
 
-// Respuesta de error de la API
-export interface ApiErrorResponse {
-  success: false;
-  error: ApiError;
-  timestamp: string;
-  path: string;
-}
-
-// Metadata de paginación
-export interface PaginationMeta {
-  currentPage: number;
-  itemsPerPage: number;
-  totalItems: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
-
-// Respuesta paginada
 export interface PaginatedResponse<T> {
   data: T[];
-  meta: PaginationMeta;
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
-// Parámetros de paginación para requests
-export interface PaginationParams {
+export interface ApiError {
+  message: string;
+  code?: string;
+  errors?: Record<string, string[]>;
+}
+
+export interface ListParams {
   page?: number;
-  limit?: number;
-  sortBy?: string;
+  pageSize?: number;
+  search?: string;
+  sortField?: string;
   sortOrder?: 'asc' | 'desc';
+  filters?: Record<string, any>;
+}
+
+export interface MutationResult<T = any> {
+  data?: T;
+  error?: ApiError;
+  isSuccess: boolean;
 }

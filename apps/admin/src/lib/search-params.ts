@@ -1,51 +1,78 @@
-import {
-  createSearchParamsCache,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringEnum,
-} from 'nuqs/server';
+/**
+ * Utilidades para manejar search params en la URL
+ */
+
+import { ReadonlyURLSearchParams } from 'next/navigation';
 
 /**
- * Parsers estándar para parámetros de tabla
- * Utilizados tanto en cliente (useQueryStates) como servidor (searchParamsCache)
+ * Obtiene un parámetro de búsqueda como string
  */
-export const tableSearchParams = {
-  // Paginación
-  page: parseAsInteger.withDefault(1),
-  limit: parseAsInteger.withDefault(10),
-
-  // Búsqueda
-  search: parseAsString.withDefault(''),
-
-  // Ordenamiento
-  sortBy: parseAsString.withDefault('createdAt'),
-  sortOrder: parseAsStringEnum(['asc', 'desc'] as const).withDefault('desc'),
-};
+export function getSearchParam(
+  searchParams: ReadonlyURLSearchParams | URLSearchParams,
+  key: string,
+  defaultValue = ''
+): string {
+  return searchParams.get(key) || defaultValue;
+}
 
 /**
- * Cache de parámetros para Server Components (Next.js 16)
- * Uso: const { page, limit, search } = await searchParamsCache.parse(searchParams)
+ * Obtiene un parámetro de búsqueda como número
  */
-export const searchParamsCache = createSearchParamsCache(tableSearchParams);
+export function getSearchParamNumber(
+  searchParams: ReadonlyURLSearchParams | URLSearchParams,
+  key: string,
+  defaultValue = 0
+): number {
+  const value = searchParams.get(key);
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
 
 /**
- * Tipo inferido de los parámetros de tabla
+ * Obtiene un parámetro de búsqueda como boolean
  */
-export type TableSearchParams = {
-  page: number;
-  limit: number;
-  search: string;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-};
+export function getSearchParamBoolean(
+  searchParams: ReadonlyURLSearchParams | URLSearchParams,
+  key: string,
+  defaultValue = false
+): boolean {
+  const value = searchParams.get(key);
+  if (!value) return defaultValue;
+  return value === 'true' || value === '1';
+}
 
 /**
- * Parámetros para enviar a la API
+ * Crea un objeto de parámetros de búsqueda
  */
-export type ApiFilterParams = {
-  page: number;
-  limit: number;
-  search?: string;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-};
+export function createSearchParams(params: Record<string, any>): URLSearchParams {
+  const searchParams = new URLSearchParams();
+  
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  
+  return searchParams;
+}
+
+/**
+ * Actualiza los search params manteniendo los existentes
+ */
+export function updateSearchParams(
+  currentParams: ReadonlyURLSearchParams | URLSearchParams,
+  updates: Record<string, any>
+): URLSearchParams {
+  const newParams = new URLSearchParams(currentParams.toString());
+  
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      newParams.delete(key);
+    } else {
+      newParams.set(key, String(value));
+    }
+  });
+  
+  return newParams;
+}

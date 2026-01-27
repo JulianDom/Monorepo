@@ -1,80 +1,31 @@
 /**
- * Tipos relacionados con autenticación
- * Sincronizados con la API (@core/application/dto/auth.dto.ts)
+ * Tipos de autenticación
  */
 
-/**
- * Tipos de actor en el sistema
- */
-export type ActorType = 'ADMIN' | 'USER';
-
-/**
- * Usuario/Actor autenticado
- */
 export interface User {
   id: string;
+  name: string;
   email: string;
-  username: string;
-  fullName: string;
-  type: ActorType;
-  permissions?: string[];
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
 }
 
-/**
- * Tokens de autenticación
- */
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-/**
- * Credenciales de login
- */
 export interface LoginCredentials {
   email: string;
   password: string;
 }
 
-/**
- * Input para el endpoint de login
- */
-export interface LoginInput {
-  email: string;
-  password: string;
-  actorType: ActorType;
-}
-
-/**
- * Respuesta del endpoint de login
- */
-export interface LoginResponse {
-  actor: User;
-  accessToken: string;
-  refreshToken: string;
-}
-
-/**
- * Input para refresh token
- */
-export interface RefreshTokenInput {
-  refreshToken: string;
-}
-
-/**
- * Respuesta del endpoint de refresh
- */
-export interface RefreshTokenResponse {
-  actor: User;
-  accessToken: string;
-  refreshToken: string;
-}
-
-/**
- * Estado de autenticación en el cliente
- */
 export interface AuthState {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+
+export interface AuthContextValue extends AuthState {
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+  updateUser: (user: Partial<User>) => void;
 }

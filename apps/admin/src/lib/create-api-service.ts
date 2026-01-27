@@ -1,114 +1,111 @@
 import { apiClient } from './api-client';
-import type { ApiFilterParams, PaginatedResponse } from '@/types';
+import type { ApiResponse, PaginatedResponse, ListParams } from '@/types/api.types';
+
+/**
+ * Opciones para el factory de servicios CRUD
+ */
+interface ServiceOptions {
+  endpoint: string;
+  resourceName?: string;
+}
+
+/**
+ * Servicio CRUD genérico
+ */
+export interface CrudService<T, CreateDTO = Partial<T>, UpdateDTO = Partial<T>> {
+  list: (params?: ListParams) => Promise<PaginatedResponse<T>>;
+  getById: (id: string) => Promise<ApiResponse<T>>;
+  create: (data: CreateDTO) => Promise<ApiResponse<T>>;
+  update: (id: string, data: UpdateDTO) => Promise<ApiResponse<T>>;
+  delete: (id: string) => Promise<ApiResponse<void>>;
+}
 
 /**
  * Factory para crear servicios CRUD estandarizados
- *
- * @example
- * ```ts
- * // src/services/user.service.ts
- * export const userService = createApiService<User, CreateUserDto, UpdateUserDto>('/users');
- *
- * // Uso:
- * const users = await userService.getAll({ page: 1, limit: 10 });
- * const user = await userService.getById('123');
- * const newUser = await userService.create({ name: 'John' });
- * await userService.update('123', { name: 'Jane' });
- * await userService.delete('123');
- * ```
  */
-export function createApiService<
-  TEntity,
-  TCreateDto = Partial<TEntity>,
-  TUpdateDto = Partial<TEntity>,
->(basePath: string) {
+export function createApiService<T, CreateDTO = Partial<T>, UpdateDTO = Partial<T>>(
+  options: ServiceOptions
+): CrudService<T, CreateDTO, UpdateDTO> {
+  const { endpoint } = options;
+
   return {
     /**
-     * Obtener todos los registros con paginación y filtros
+     * Listar recursos con paginación y filtros
      */
-    getAll: async (
-      params?: ApiFilterParams
-    ): Promise<PaginatedResponse<TEntity>> => {
-      const response = await apiClient.get<PaginatedResponse<TEntity>>(
-        basePath,
-        { params }
-      );
-      return response.data;
+    async list(params?: ListParams): Promise<PaginatedResponse<T>> {
+      const queryParams = new URLSearchParams();
+      
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.sortField) queryParams.append('sortField', params.sortField);
+      if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+      
+      // Agregar filtros adicionales
+      if (params?.filters) {
+        Object.entries(params.filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, String(value));
+          }
+        });
+      }
+
+      const query = queryParams.toString();
+      const url = query ? `${endpoint}?${query}` : endpoint;
+      
+      return apiClient.get<PaginatedResponse<T>>(url);
     },
 
     /**
-     * Obtener un registro por ID
+     * Obtener un recurso por ID
      */
-    getById: async (id: string): Promise<TEntity> => {
-      const response = await apiClient.get<TEntity>(`${basePath}/${id}`);
-      return response.data;
+    async getById(id: string): Promise<ApiResponse<T>> {
+      return apiClient.get<ApiResponse<T>>(`${endpoint}/${id}`);
     },
 
     /**
-     * Crear un nuevo registro
+     * Crear un nuevo recurso
      */
-    create: async (data: TCreateDto): Promise<TEntity> => {
-      const response = await apiClient.post<TEntity>(basePath, data);
-      return response.data;
+    async create(data: CreateDTO): Promise<ApiResponse<T>> {
+      return apiClient.post<ApiResponse<T>>(endpoint, data);
     },
 
     /**
-     * Actualizar un registro existente
+     * Actualizar un recurso existente
      */
-    update: async (id: string, data: TUpdateDto): Promise<TEntity> => {
-      const response = await apiClient.put<TEntity>(`${basePath}/${id}`, data);
-      return response.data;
+    async update(id: string, data: UpdateDTO): Promise<ApiResponse<T>> {
+      return apiClient.put<ApiResponse<T>>(`${endpoint}/${id}`, data);
     },
 
     /**
-     * Actualización parcial (PATCH)
+     * Eliminar un recurso
      */
-    patch: async (id: string, data: Partial<TUpdateDto>): Promise<TEntity> => {
-      const response = await apiClient.patch<TEntity>(
-        `${basePath}/${id}`,
-        data
-      );
-      return response.data;
-    },
-
-    /**
-     * Eliminar un registro (soft delete)
-     */
-    delete: async (id: string): Promise<void> => {
-      await apiClient.delete(`${basePath}/${id}`);
-    },
-
-    /**
-     * Endpoint personalizado GET
-     */
-    customGet: async <T = unknown>(
-      endpoint: string,
-      params?: Record<string, unknown>
-    ): Promise<T> => {
-      const response = await apiClient.get<T>(`${basePath}${endpoint}`, {
-        params,
-      });
-      return response.data;
-    },
-
-    /**
-     * Endpoint personalizado POST
-     */
-    customPost: async <T = unknown, D = unknown>(
-      endpoint: string,
-      data?: D
-    ): Promise<T> => {
-      const response = await apiClient.post<T>(`${basePath}${endpoint}`, data);
-      return response.data;
+    async delete(id: string): Promise<ApiResponse<void>> {
+      return apiClient.delete<ApiResponse<void>>(`${endpoint}/${id}`);
     },
   };
 }
 
 /**
- * Tipo del servicio creado
+ * Ejemplo de uso:
+ * 
+ * const userService = createApiService<User>({
+ *   endpoint: '/users',
+ *   resourceName: 'usuario'
+ * });
+ * 
+ * // Listar usuarios
+ * const users = await userService.list({ page: 1, pageSize: 10 });
+ * 
+ * // Obtener usuario
+ * const user = await userService.getById('123');
+ * 
+ * // Crear usuario
+ * const newUser = await userService.create({ name: 'Juan', email: 'juan@example.com' });
+ * 
+ * // Actualizar usuario
+ * const updated = await userService.update('123', { name: 'Juan Actualizado' });
+ * 
+ * // Eliminar usuario
+ * await userService.delete('123');
  */
-export type ApiService<
-  TEntity,
-  TCreateDto = Partial<TEntity>,
-  TUpdateDto = Partial<TEntity>,
-> = ReturnType<typeof createApiService<TEntity, TCreateDto, TUpdateDto>>;

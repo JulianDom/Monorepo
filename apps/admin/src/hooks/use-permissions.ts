@@ -1,150 +1,87 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
 import { useAuth } from '@/providers/auth-provider';
+import { ROLES } from '@/config/constants';
 
-/**
- * Formato de permisos: "resource:action"
- * Ejemplos: "users:read", "users:create", "users:delete", "reports:export"
- */
-type Permission = string;
+export type Permission = 'admin' | 'user-admin' | 'content-admin' | 'reports-admin' | 'config-admin' | 'operative';
 
-/**
- * Roles predefinidos (extender según necesidad)
- */
-export type Role = 'admin' | 'editor' | 'viewer' | string;
-
-/**
- * Mapeo de roles a permisos
- * Configurar según la lógica de tu aplicación
- */
-const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  admin: ['*'], // Todos los permisos
-  editor: [
-    'users:read',
-    'users:create',
-    'users:update',
-    'products:read',
-    'products:create',
-    'products:update',
-    'products:delete',
-    'orders:read',
-    'orders:update',
-  ],
-  viewer: [
-    'users:read',
-    'products:read',
-    'orders:read',
-    'reports:read',
-  ],
+const rolePermissions: Record<string, Permission[]> = {
+  [ROLES.ADMIN]: ['admin', 'user-admin', 'content-admin', 'reports-admin', 'config-admin'],
+  [ROLES.USER_ADMIN]: ['user-admin'],
+  [ROLES.CONTENT_ADMIN]: ['content-admin'],
+  [ROLES.REPORTS_ADMIN]: ['reports-admin'],
+  [ROLES.CONFIG_ADMIN]: ['config-admin'],
+  [ROLES.OPERATIVE]: ['operative'],
 };
 
 /**
- * Hook para verificar permisos del usuario
- *
- * @example
- * ```tsx
- * function UserActions() {
- *   const { can, canAny, canAll } = usePermissions();
- *
- *   return (
- *     <div>
- *       {can('users:create') && <Button>Crear Usuario</Button>}
- *       {can('users:delete') && <Button variant="destructive">Eliminar</Button>}
- *     </div>
- *   );
- * }
- * ```
+ * Hook para control de permisos basado en roles (RBAC)
  */
 export function usePermissions() {
-  const { user, isAuthenticated } = useAuth();
-
-  // Permisos del usuario (del servidor o derivados del rol)
-  const userPermissions = useMemo(() => {
-    if (!user) return [];
-
-    // Si el usuario tiene permisos explícitos, usarlos
-    if (user.permissions && user.permissions.length > 0) {
-      return user.permissions;
-    }
-
-    // Si no, derivar del rol
-    return ROLE_PERMISSIONS[user.role] || [];
-  }, [user]);
+  const { user } = useAuth();
 
   /**
-   * Verificar si tiene un permiso específico
+   * Verifica si el usuario tiene un permiso específico
    */
-  const can = useCallback(
-    (permission: Permission): boolean => {
-      if (!isAuthenticated || !user) return false;
-
-      // Admin tiene todos los permisos
-      if (userPermissions.includes('*')) return true;
-
-      // Verificar permiso específico
-      return userPermissions.includes(permission);
-    },
-    [isAuthenticated, user, userPermissions]
-  );
+  const can = (permission: Permission): boolean => {
+    if (!user) return false;
+    
+    const userPermissions = rolePermissions[user.role] || [];
+    return userPermissions.includes(permission);
+  };
 
   /**
-   * Verificar si tiene al menos uno de los permisos
+   * Verifica si el usuario tiene alguno de los permisos
    */
-  const canAny = useCallback(
-    (permissions: Permission[]): boolean => {
-      return permissions.some((p) => can(p));
-    },
-    [can]
-  );
+  const canAny = (permissions: Permission[]): boolean => {
+    return permissions.some(permission => can(permission));
+  };
 
   /**
-   * Verificar si tiene todos los permisos
+   * Verifica si el usuario tiene todos los permisos
    */
-  const canAll = useCallback(
-    (permissions: Permission[]): boolean => {
-      return permissions.every((p) => can(p));
-    },
-    [can]
-  );
+  const canAll = (permissions: Permission[]): boolean => {
+    return permissions.every(permission => can(permission));
+  };
 
   /**
-   * Verificar si tiene un rol específico
+   * Verifica si el usuario es administrador
    */
-  const hasRole = useCallback(
-    (role: Role): boolean => {
-      if (!user) return false;
-      return user.role === role;
-    },
-    [user]
-  );
+  const isAdmin = (): boolean => {
+    return can('admin');
+  };
 
   /**
-   * Verificar si tiene alguno de los roles
+   * Verifica si el usuario es operativo
    */
-  const hasAnyRole = useCallback(
-    (roles: Role[]): boolean => {
-      if (!user) return false;
-      return roles.includes(user.role);
-    },
-    [user]
-  );
-
-  /**
-   * Verificar si es admin
-   */
-  const isAdmin = useMemo(() => {
-    return user?.role === 'admin' || userPermissions.includes('*');
-  }, [user, userPermissions]);
+  const isOperative = (): boolean => {
+    return can('operative');
+  };
 
   return {
     can,
     canAny,
     canAll,
-    hasRole,
-    hasAnyRole,
     isAdmin,
-    permissions: userPermissions,
-    role: user?.role,
+    isOperative,
   };
 }
+
+/**
+ * Ejemplo de uso:
+ * 
+ * function AdminPanel() {
+ *   const { can, isAdmin } = usePermissions();
+ * 
+ *   if (!isAdmin()) {
+ *     return <div>No tienes permisos para ver esta página</div>;
+ *   }
+ * 
+ *   return (
+ *     <div>
+ *       {can('user-admin') && <UserManagement />}
+ *       {can('content-admin') && <ContentManagement />}
+ *     </div>
+ *   );
+ * }
+ */

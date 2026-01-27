@@ -1,34 +1,29 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
-
-interface QueryProviderProps {
-  children: ReactNode;
-}
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { useState } from 'react';
+import { env } from '@/config';
 
 /**
- * Provider de TanStack Query v5
- * Configura el cliente con staleTime de 5 minutos
+ * Provider de TanStack Query (React Query)
+ * Configurado con defaults sensatos para la aplicación
  */
-export function QueryProvider({ children }: QueryProviderProps) {
+export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Los datos se consideran frescos por 5 minutos
-            staleTime: 5 * 60 * 1000,
-            // Reintentar 1 vez en caso de error
-            retry: 1,
-            // No refetch en window focus por defecto
+            // Configuración por defecto para queries
+            staleTime: 1000 * 60, // 1 minuto
+            gcTime: 1000 * 60 * 5, // 5 minutos (antes cacheTime)
             refetchOnWindowFocus: false,
+            retry: 1,
           },
           mutations: {
-            // Mostrar errores de mutaciones
-            onError: (error) => {
-              console.error('Mutation error:', error);
-            },
+            // Configuración por defecto para mutations
+            retry: 0,
           },
         },
       })
@@ -37,13 +32,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {/*
-        Para habilitar React Query DevTools, instala:
-        pnpm add @tanstack/react-query-devtools
-
-        Y descomenta:
-        <ReactQueryDevtools initialIsOpen={false} />
-      */}
+      {env.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

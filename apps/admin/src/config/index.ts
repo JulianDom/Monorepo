@@ -11,9 +11,7 @@ export {
   DATE_FORMATS,
 } from './constants';
 export {
-  routes,
-  publicRoutes,
-  authRoutes,
-  DEFAULT_LOGIN_REDIRECT,
-  LOGIN_ROUTE,
+  NAVIGATION,
+  PUBLIC_ROUTES,
+  PROTECTED_ROUTES,
 } from './routes';

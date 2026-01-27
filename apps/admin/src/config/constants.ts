@@ -97,3 +97,50 @@ export const DATE_FORMATS = {
   API: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
   INPUT: 'yyyy-MM-dd',
 } as const;
+
+// ============================================
+// ROLES
+// ============================================
+export const ROLES = {
+  ADMIN: 'Administrador General',
+  USER_ADMIN: 'Administrador de Usuarios',
+  CONTENT_ADMIN: 'Administrador de Contenido',
+  REPORTS_ADMIN: 'Administrador de Reportes',
+  CONFIG_ADMIN: 'Administrador de Configuración',
+  OPERATIVE: 'Operativo',
+} as const;
+
+export const ADMIN_ROLES = [
+  ROLES.ADMIN,
+  ROLES.USER_ADMIN,
+  ROLES.CONTENT_ADMIN,
+  ROLES.REPORTS_ADMIN,
+  ROLES.CONFIG_ADMIN,
+] as const;
+
+// ============================================
+// USER STATUS
+// ============================================
+export const USER_STATUS = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const;
+
+export const FILTER_STATUS = {
+  ALL: 'all',
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  ENABLED: 'habilitado',
+  DISABLED: 'deshabilitado',
+} as const;
+
+// ============================================
+// VALIDATION
+// ============================================
+export const VALIDATION = {
+  MIN_PASSWORD_LENGTH: 6,
+  MIN_NAME_LENGTH: 3,
+  MAX_NAME_LENGTH: 100,
+  MAX_EMAIL_LENGTH: 255,
+  PHONE_PATTERN: /^\+?[0-9\s\-()]+$/,
+} as const;

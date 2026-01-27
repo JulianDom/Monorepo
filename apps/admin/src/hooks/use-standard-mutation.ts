@@ -1,154 +1,96 @@
 'use client';
 
-import {
-  useMutation,
-  useQueryClient,
-  type UseMutationOptions,
-} from '@tanstack/react-query';
-import { type AxiosError } from 'axios';
+import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { ApiErrorResponse } from '@/types';
+import type { ApiError } from '@/types/api.types';
 
-type MutationOperation = 'create' | 'update' | 'delete' | 'custom';
-
-interface StandardMutationOptions<TData, TVariables> {
-  /** Función que ejecuta la mutación */
+export interface StandardMutationOptions<TData, TVariables> extends Omit<UseMutationOptions<TData, ApiError, TVariables>, 'mutationFn'> {
   mutationFn: (variables: TVariables) => Promise<TData>;
-
-  /** Tipo de operación para mensajes automáticos */
-  operation?: MutationOperation;
-
-  /** Nombre de la entidad para mensajes (ej: "Usuario") */
-  entityName?: string;
-
-  /** Query keys a invalidar después del éxito */
-  invalidateKeys?: unknown[][];
-
-  /** Mensaje de éxito personalizado */
   successMessage?: string;
-
-  /** Mensaje de error personalizado */
   errorMessage?: string;
-
-  /** Mostrar toast de éxito (default: true) */
+  invalidateQueries?: string[];
   showSuccessToast?: boolean;
-
-  /** Mostrar toast de error (default: true - ya lo maneja el interceptor) */
   showErrorToast?: boolean;
-
-  /** Callbacks adicionales */
-  onSuccess?: (data: TData, variables: TVariables) => void;
-  onError?: (error: AxiosError<ApiErrorResponse>, variables: TVariables) => void;
 }
 
 /**
- * Hook estandarizado para mutaciones (POST, PUT, DELETE)
- * Maneja automáticamente:
- * - Toasts de éxito/error
- * - Invalidación de queries
- * - Mensajes según tipo de operación
- *
- * @example
- * ```tsx
- * const createUser = useStandardMutation({
- *   mutationFn: (data) => apiClient.post('/users', data),
- *   operation: 'create',
- *   entityName: 'Usuario',
- *   invalidateKeys: [['users']],
- * });
- *
- * createUser.mutate({ name: 'John' });
- * ```
+ * Hook para mutaciones estandarizadas con toast automático
+ * Incluye manejo de errores, mensajes de éxito y invalidación de queries
  */
-export function useStandardMutation<TData = unknown, TVariables = unknown>({
-  mutationFn,
-  operation = 'custom',
-  entityName = 'Registro',
-  invalidateKeys = [],
-  successMessage,
-  errorMessage,
-  showSuccessToast = true,
-  showErrorToast = false, // El interceptor ya maneja errores
-  onSuccess,
-  onError,
-}: StandardMutationOptions<TData, TVariables>) {
+export function useStandardMutation<TData = any, TVariables = any>(
+  options: StandardMutationOptions<TData, TVariables>
+) {
   const queryClient = useQueryClient();
+  
+  const {
+    mutationFn,
+    successMessage,
+    errorMessage,
+    invalidateQueries = [],
+    showSuccessToast = true,
+    showErrorToast = true,
+    onSuccess,
+    onError,
+    ...restOptions
+  } = options;
 
-  // Generar mensaje de éxito según operación
-  const getSuccessMessage = (): string => {
-    if (successMessage) return successMessage;
+  return useMutation<TData, ApiError, TVariables>({
+    mutationFn,
+    onSuccess: (data, variables, context) => {
+      // Mostrar toast de éxito
+      if (showSuccessToast && successMessage) {
+        toast.success(successMessage);
+      }
 
-    switch (operation) {
-      case 'create':
-        return `${entityName} creado correctamente`;
-      case 'update':
-        return `${entityName} actualizado correctamente`;
-      case 'delete':
-        return `${entityName} eliminado correctamente`;
-      default:
-        return 'Operación realizada correctamente';
-    }
-  };
-
-  const mutation = useMutation<TData, AxiosError<ApiErrorResponse>, TVariables>(
-    {
-      mutationFn,
-      onSuccess: (data, variables) => {
-        // Toast de éxito
-        if (showSuccessToast) {
-          toast.success(getSuccessMessage());
-        }
-
-        // Invalidar queries relacionadas
-        invalidateKeys.forEach((key) => {
-          queryClient.invalidateQueries({ queryKey: key });
+      // Invalidar queries relacionadas
+      if (invalidateQueries.length > 0) {
+        invalidateQueries.forEach(queryKey => {
+          queryClient.invalidateQueries({ queryKey: [queryKey] });
         });
+      }
 
-        // Callback personalizado
-        onSuccess?.(data, variables);
-      },
-      onError: (error, variables) => {
-        // Toast de error (solo si no lo maneja el interceptor)
-        if (showErrorToast) {
-          const message =
-            errorMessage ||
-            error.response?.data?.error?.message ||
-            'Ha ocurrido un error';
-          toast.error(message);
+      // Callback personalizado
+      onSuccess?.(data, variables, context);
+    },
+    onError: (error, variables, context) => {
+      // Mostrar toast de error
+      if (showErrorToast) {
+        const message = errorMessage || error.message || 'Ocurrió un error';
+        toast.error(message);
+        
+        // Mostrar errores de validación si existen
+        if (error.errors) {
+          Object.entries(error.errors).forEach(([field, messages]) => {
+            messages.forEach(msg => {
+              toast.error(`${field}: ${msg}`);
+            });
+          });
         }
+      }
 
-        // Callback personalizado
-        onError?.(error, variables);
-      },
-    }
-  );
-
-  return mutation;
+      // Callback personalizado
+      onError?.(error, variables, context);
+    },
+    ...restOptions,
+  });
 }
 
 /**
- * Hook para crear un registro
+ * Ejemplo de uso:
+ * 
+ * const createUser = useStandardMutation({
+ *   mutationFn: (data) => userService.create(data),
+ *   successMessage: 'Usuario creado exitosamente',
+ *   errorMessage: 'Error al crear usuario',
+ *   invalidateQueries: ['users'],
+ *   onSuccess: () => {
+ *     router.push('/users');
+ *   }
+ * });
+ * 
+ * // En el componente
+ * <form onSubmit={(e) => {
+ *   e.preventDefault();
+ *   createUser.mutate(formData);
+ * }}>
  */
-export function useCreateMutation<TData = unknown, TVariables = unknown>(
-  options: Omit<StandardMutationOptions<TData, TVariables>, 'operation'>
-) {
-  return useStandardMutation({ ...options, operation: 'create' });
-}
-
-/**
- * Hook para actualizar un registro
- */
-export function useUpdateMutation<TData = unknown, TVariables = unknown>(
-  options: Omit<StandardMutationOptions<TData, TVariables>, 'operation'>
-) {
-  return useStandardMutation({ ...options, operation: 'update' });
-}
-
-/**
- * Hook para eliminar un registro
- */
-export function useDeleteMutation<TData = unknown, TVariables = unknown>(
-  options: Omit<StandardMutationOptions<TData, TVariables>, 'operation'>
-) {
-  return useStandardMutation({ ...options, operation: 'delete' });
-}

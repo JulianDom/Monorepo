@@ -1,113 +1,51 @@
 'use client';
 
-import { type ReactNode } from 'react';
-import { usePermissions } from '@/hooks/use-permissions';
+import { ReactNode } from 'react';
+import { usePermissions, Permission } from '@/hooks/use-permissions';
 
 interface CanProps {
-  /** Permiso requerido (ej: "users:create") */
-  permission?: string;
-  /** Lista de permisos (requiere al menos uno) */
-  permissions?: string[];
-  /** Requerir todos los permisos (default: false = al menos uno) */
-  requireAll?: boolean;
-  /** Rol requerido */
-  role?: string;
-  /** Lista de roles (requiere al menos uno) */
-  roles?: string[];
-  /** Contenido a mostrar si tiene permiso */
-  children: ReactNode;
-  /** Contenido alternativo si no tiene permiso */
+  permission: Permission | Permission[];
   fallback?: ReactNode;
+  children: ReactNode;
+  requireAll?: boolean;
 }
 
 /**
- * Componente para renderizado condicional basado en permisos
- *
- * @example
- * ```tsx
- * // Permiso único
- * <Can permission="users:create">
- *   <Button>Crear Usuario</Button>
- * </Can>
- *
- * // Múltiples permisos (al menos uno)
- * <Can permissions={['users:update', 'users:delete']}>
- *   <ActionsMenu />
- * </Can>
- *
- * // Todos los permisos requeridos
- * <Can permissions={['reports:read', 'reports:export']} requireAll>
- *   <ExportButton />
- * </Can>
- *
- * // Por rol
- * <Can role="admin">
+ * Componente para control de permisos
+ * Renderiza children solo si el usuario tiene los permisos necesarios
+ */
+export function Can({ permission, fallback = null, children, requireAll = false }: CanProps) {
+  const { can, canAny, canAll } = usePermissions();
+
+  const hasPermission = Array.isArray(permission)
+    ? requireAll
+      ? canAll(permission)
+      : canAny(permission)
+    : can(permission);
+
+  return <>{hasPermission ? children : fallback}</>;
+}
+
+/**
+ * Ejemplo de uso:
+ * 
+ * // Renderizar solo para admins
+ * <Can permission="admin">
  *   <AdminPanel />
  * </Can>
- *
- * // Con fallback
- * <Can permission="users:delete" fallback={<DisabledButton />}>
- *   <DeleteButton />
+ * 
+ * // Renderizar para usuarios con alguno de estos permisos
+ * <Can permission={['user-admin', 'content-admin']}>
+ *   <ManagementPanel />
  * </Can>
- * ```
+ * 
+ * // Renderizar con fallback
+ * <Can permission="admin" fallback={<NoPermission />}>
+ *   <AdminPanel />
+ * </Can>
+ * 
+ * // Requerir todos los permisos
+ * <Can permission={['admin', 'user-admin']} requireAll>
+ *   <SuperAdminPanel />
+ * </Can>
  */
-export function Can({
-  permission,
-  permissions,
-  requireAll = false,
-  role,
-  roles,
-  children,
-  fallback = null,
-}: CanProps) {
-  const { can, canAny, canAll, hasRole, hasAnyRole } = usePermissions();
-
-  let hasAccess = false;
-
-  // Verificar por rol
-  if (role) {
-    hasAccess = hasRole(role);
-  } else if (roles && roles.length > 0) {
-    hasAccess = hasAnyRole(roles);
-  }
-  // Verificar por permiso
-  else if (permission) {
-    hasAccess = can(permission);
-  } else if (permissions && permissions.length > 0) {
-    hasAccess = requireAll ? canAll(permissions) : canAny(permissions);
-  } else {
-    // Sin restricciones, mostrar siempre
-    hasAccess = true;
-  }
-
-  if (hasAccess) {
-    return <>{children}</>;
-  }
-
-  return <>{fallback}</>;
-}
-
-/**
- * Componente inverso - muestra solo si NO tiene el permiso
- */
-export function Cannot({
-  permission,
-  permissions,
-  requireAll = false,
-  role,
-  roles,
-  children,
-}: Omit<CanProps, 'fallback'>) {
-  return (
-    <Can
-      permission={permission}
-      permissions={permissions}
-      requireAll={requireAll}
-      role={role}
-      roles={roles}
-      fallback={children}
-    >
-      {null}
-    </Can>
-  );
-}

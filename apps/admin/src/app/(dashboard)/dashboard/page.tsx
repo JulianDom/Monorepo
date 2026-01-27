@@ -1,122 +1,117 @@
-'use client';
-
-import { Users, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
-import { useAuth } from '@/providers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface StatCard {
-  title: string;
-  value: string;
-  description: string;
-  icon: React.ElementType;
-  trend?: string;
-}
-
-const stats: StatCard[] = [
-  {
-    title: 'Usuarios Totales',
-    value: '2,350',
-    description: '+180 este mes',
-    icon: Users,
-    trend: '+12.5%',
-  },
-  {
-    title: 'Ventas',
-    value: '1,234',
-    description: '+19 hoy',
-    icon: ShoppingCart,
-    trend: '+8.2%',
-  },
-  {
-    title: 'Ingresos',
-    value: '$45,231',
-    description: '+20.1% vs mes anterior',
-    icon: DollarSign,
-    trend: '+20.1%',
-  },
-  {
-    title: 'Crecimiento',
-    value: '+573',
-    description: 'Nuevos usuarios activos',
-    icon: TrendingUp,
-    trend: '+4.3%',
-  },
-];
+import { PageShell } from '@/components/shared/page-shell';
+import { Card } from '@/components/ui/card';
+import { ShieldCheck, Users, Package, MapPin, DollarSign, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const stats = [
+    {
+      title: 'Administradores',
+      value: '12',
+      icon: ShieldCheck,
+      description: 'Activos en el sistema',
+      trend: '+2 este mes',
+    },
+    {
+      title: 'Usuarios Operativos',
+      value: '45',
+      icon: Users,
+      description: 'Usuarios activos',
+      trend: '+5 este mes',
+    },
+    {
+      title: 'Productos',
+      value: '1,234',
+      icon: Package,
+      description: 'En catálogo',
+      trend: '+123 este mes',
+    },
+    {
+      title: 'Locales',
+      value: '89',
+      icon: MapPin,
+      description: 'Puntos de venta',
+      trend: '+3 este mes',
+    },
+    {
+      title: 'Precios Registrados',
+      value: '15,678',
+      icon: DollarSign,
+      description: 'Total de registros',
+      trend: '+1,234 este mes',
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Bienvenido de vuelta, {user?.fullName || 'Administrador'}
-        </p>
-      </div>
-
+    <PageShell
+      title="Dashboard"
+      description="Resumen general del sistema"
+    >
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
+            <Card key={stat.title} className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
+                <p className="text-3xl font-bold text-foreground mb-2">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.description}</p>
+                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  {stat.trend}
                 </p>
-              </CardContent>
+              </div>
             </Card>
           );
         })}
       </div>
 
-      {/* Content Placeholder */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Resumen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-              Gráfico de resumen (próximamente)
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Usuario #{i} se registró
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Hace {i * 5} minutos
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      {/* Welcome Message */}
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-foreground mb-2">
+          Bienvenido al Sistema de Relevamiento de Precios
+        </h2>
+        <p className="text-muted-foreground mb-4">
+          Utiliza el menú lateral para navegar entre las diferentes secciones del sistema.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="font-medium text-foreground mb-1">Administradores</h3>
+            <p className="text-sm text-muted-foreground">
+              Gestiona los administradores del sistema
+            </p>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="font-medium text-foreground mb-1">Usuarios Operativos</h3>
+            <p className="text-sm text-muted-foreground">
+              Administra los usuarios que relevan precios
+            </p>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="font-medium text-foreground mb-1">Productos</h3>
+            <p className="text-sm text-muted-foreground">
+              Mantén actualizado el catálogo de productos
+            </p>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="font-medium text-foreground mb-1">Locales</h3>
+            <p className="text-sm text-muted-foreground">
+              Gestiona los puntos de venta físicos
+            </p>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="font-medium text-foreground mb-1">Precios</h3>
+            <p className="text-sm text-muted-foreground">
+              Visualiza y consulta precios registrados
+            </p>
+          </div>
+        </div>
+      </Card>
+    </PageShell>
   );
 }

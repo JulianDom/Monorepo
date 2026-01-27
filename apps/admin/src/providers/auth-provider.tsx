@@ -1,227 +1,127 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  type ReactNode,
-} from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { AUTH, ROUTES, ENDPOINTS } from '@/config';
-import { apiClient } from '@/lib';
-import type {
-  User,
-  LoginCredentials,
-  LoginResponse,
-  RefreshTokenResponse,
-  AuthState,
-} from '@/types/auth.types';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { env, ROUTES } from '@/config';
+import type { User, LoginCredentials, AuthContextValue } from '@/types/auth.types';
 
-interface AuthContextValue extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshAuth: () => Promise<void>;
-}
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-// ============================================
-// Storage helpers (SSR-safe)
-// ============================================
-const storage = {
-  getToken: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(AUTH.TOKEN_KEY);
-  },
-  setToken: (token: string): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(AUTH.TOKEN_KEY, token);
-    // También setear en cookie para el middleware
-    document.cookie = `access_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-  },
-  getRefreshToken: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(AUTH.REFRESH_TOKEN_KEY);
-  },
-  setRefreshToken: (token: string): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(AUTH.REFRESH_TOKEN_KEY, token);
-  },
-  getUser: (): User | null => {
-    if (typeof window === 'undefined') return null;
-    const data = localStorage.getItem(AUTH.USER_KEY);
-    return data ? JSON.parse(data) : null;
-  },
-  setUser: (user: User): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(AUTH.USER_KEY, JSON.stringify(user));
-  },
-  clear: (): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(AUTH.TOKEN_KEY);
-    localStorage.removeItem(AUTH.REFRESH_TOKEN_KEY);
-    localStorage.removeItem(AUTH.USER_KEY);
-    // Limpiar cookie
-    document.cookie = 'access_token=; path=/; max-age=0';
-  },
-};
-
-// ============================================
-// Provider
-// ============================================
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+/**
+ * Provider de autenticación
+ * Maneja el estado de autenticación y persistencia en localStorage
+ */
+export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Inicializar desde storage
+  // Cargar usuario desde localStorage al montar
   useEffect(() => {
-    const user = storage.getUser();
-    const token = storage.getToken();
+    const storedToken = localStorage.getItem(env.authTokenKey);
+    const storedUser = localStorage.getItem(env.authUserKey);
 
-    if (user && token) {
-      setState({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } else {
-      setState((prev) => ({ ...prev, isLoading: false }));
+    if (storedToken && storedUser) {
+      try {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+
+        // Asegurar que la cookie esté sincronizada
+        document.cookie = `access_token=${storedToken}; path=/; max-age=2592000; samesite=lax`;
+      } catch (error) {
+        // Si hay error al parsear, limpiar
+        localStorage.removeItem(env.authTokenKey);
+        localStorage.removeItem(env.authUserKey);
+        document.cookie = 'access_token=; path=/; max-age=0';
+      }
     }
+
+    setIsLoading(false);
   }, []);
 
-  // Login
-  const login = useCallback(
-    async (credentials: LoginCredentials): Promise<void> => {
-      // Enviar con actorType: ADMIN para el panel de administración
-      const response = await apiClient.post<LoginResponse>(
-        ENDPOINTS.AUTH.LOGIN,
-        {
-          email: credentials.email,
-          password: credentials.password,
-          actorType: 'ADMIN',
-        }
-      );
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      // TODO: Reemplazar con llamada real a la API
+      // const response = await apiClient.post('/auth/login', credentials);
 
-      const { actor, accessToken, refreshToken } = response.data;
+      // Mock de login
+      const mockUser: User = {
+        id: '1',
+        name: 'Administrador',
+        email: credentials.email,
+        role: 'Administrador General',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+      };
 
-      // Guardar en storage
-      storage.setToken(accessToken);
-      storage.setRefreshToken(refreshToken);
-      storage.setUser(actor);
+      const mockToken = 'mock-jwt-token';
+
+      // Guardar en localStorage
+      localStorage.setItem(env.authTokenKey, mockToken);
+      localStorage.setItem(env.authUserKey, JSON.stringify(mockUser));
+
+      // Guardar token en cookie para el middleware
+      document.cookie = `access_token=${mockToken}; path=/; max-age=2592000; samesite=lax`;
 
       // Actualizar estado
-      setState({
-        user: actor,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      setToken(mockToken);
+      setUser(mockUser);
 
-      // Redirigir a callbackUrl o dashboard
-      const callbackUrl = searchParams.get('callbackUrl');
-      router.push(callbackUrl || ROUTES.DASHBOARD);
-    },
-    [router, searchParams]
-  );
-
-  // Logout
-  const logout = useCallback(async (): Promise<void> => {
-    try {
-      await apiClient.post(ENDPOINTS.AUTH.LOGOUT, { allSessions: false });
-    } catch {
-      // Ignorar errores de logout (el token podría ya estar expirado)
-    } finally {
-      storage.clear();
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-      router.push(ROUTES.LOGIN);
+      // Redirigir al dashboard
+      router.push(ROUTES.DASHBOARD);
+    } catch (error) {
+      throw error;
     }
-  }, [router]);
+  };
 
-  // Refresh auth (refrescar token)
-  const refreshAuth = useCallback(async (): Promise<void> => {
-    const refreshToken = storage.getRefreshToken();
+  const logout = () => {
+    // Limpiar localStorage
+    localStorage.removeItem(env.authTokenKey);
+    localStorage.removeItem(env.authUserKey);
 
-    if (!refreshToken) {
-      storage.clear();
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-      return;
-    }
+    // Limpiar cookie
+    document.cookie = 'access_token=; path=/; max-age=0';
 
-    try {
-      const response = await apiClient.post<RefreshTokenResponse>(
-        ENDPOINTS.AUTH.REFRESH,
-        { refreshToken }
-      );
+    // Limpiar estado
+    setToken(null);
+    setUser(null);
 
-      const { actor, accessToken, refreshToken: newRefreshToken } = response.data;
+    // Redirigir al login
+    router.push(ROUTES.LOGIN);
+  };
 
-      // Actualizar tokens
-      storage.setToken(accessToken);
-      storage.setRefreshToken(newRefreshToken);
-      storage.setUser(actor);
+  const updateUser = (updates: Partial<User>) => {
+    if (!user) return;
 
-      setState({
-        user: actor,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch {
-      // Token inválido, limpiar
-      storage.clear();
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-    }
-  }, []);
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem(env.authUserKey, JSON.stringify(updatedUser));
+  };
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      ...state,
-      login,
-      logout,
-      refreshAuth,
-    }),
-    [state, login, logout, refreshAuth]
-  );
+  const value: AuthContextValue = {
+    user,
+    token,
+    isAuthenticated: !!user && !!token,
+    isLoading,
+    login,
+    logout,
+    updateUser,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// ============================================
-// Hook
-// ============================================
-export function useAuth(): AuthContextValue {
+/**
+ * Hook para acceder al contexto de autenticación
+ */
+export function useAuth() {
   const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  
+  if (context === undefined) {
+    throw new Error('useAuth debe ser usado dentro de AuthProvider');
   }
-
+  
   return context;
 }
-
-// ============================================
-// Export storage para uso en api-client
-// ============================================
-export { storage as authStorage };
