@@ -22,6 +22,19 @@ interface EnvConfig {
   isDev: boolean;
   isProd: boolean;
   isStaging: boolean;
+  // Auth storage keys
+  authTokenKey: string;
+  authRefreshTokenKey: string;
+  authUserKey: string;
+  // Timeouts
+  apiTimeout: number;
+  /**
+   * Bypass de autenticación para desarrollo de UI
+   * Permite navegar sin login real cuando la API no está disponible
+   * Activar con NEXT_PUBLIC_AUTH_BYPASS=true en .env.local
+   * NUNCA activar en producción
+   */
+  authBypass: boolean;
 }
 
 function getEnvironment(): Environment {
@@ -83,6 +96,10 @@ function getAppUrl(): string {
 function createEnvConfig(): EnvConfig {
   const environment = getEnvironment();
 
+  // Auth bypass solo funciona en desarrollo local
+  const authBypass =
+    environment === 'local' && process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
+
   return {
     apiUrl: getApiUrl(environment),
     appUrl: getAppUrl(),
@@ -90,6 +107,14 @@ function createEnvConfig(): EnvConfig {
     isDev: environment === 'local',
     isProd: environment === 'production',
     isStaging: environment === 'staging',
+    // Auth storage keys
+    authTokenKey: 'access_token',
+    authRefreshTokenKey: 'refresh_token',
+    authUserKey: 'user',
+    // Timeouts
+    apiTimeout: 30000,
+    // Auth bypass (solo desarrollo)
+    authBypass,
   };
 }
 

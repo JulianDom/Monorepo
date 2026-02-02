@@ -1,3 +1,11 @@
+/**
+ * =============================================================================
+ * PÁGINA: Locales (Stores)
+ * =============================================================================
+ *
+ * Gestión de locales/puntos de venta.
+ * Permite: listar, crear, editar, activar/desactivar, importar desde Excel.
+ */
 'use client';
 
 import { useState } from 'react';
@@ -5,22 +13,23 @@ import { LocationList } from '@/features/locations/components/LocationList';
 import { LocationForm } from '@/features/locations/components/LocationForm';
 import { LocationImport } from '@/features/locations/components/LocationImport';
 import { LocationImportReport } from '@/features/locations/components/LocationImportReport';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmAction, getConfirmDialogTexts } from '@/hooks';
+import {
+  useStores,
+  useCreateStore,
+  useUpdateStore,
+  useToggleStoreStatus,
+  type Store,
+  type CreateStoreDTO,
+  type UpdateStoreDTO,
+} from '@/features/locations';
 
-export type Location = {
-  id: string;
-  codigo: string;
-  nombre: string;
-  direccion: string;
-  ciudad: string;
-  provincia: string;
-  telefono: string;
-  email?: string;
-  habilitado: boolean;
-  fechaCreacion: string;
-  fechaModificacion: string;
-};
+// =============================================================================
+// TIPOS
+// =============================================================================
 
-export type LocationView = 'list' | 'create' | 'edit' | 'import' | 'report';
+type ViewMode = 'list' | 'create' | 'edit' | 'import' | 'report';
 
 export type ImportResult = {
   total: number;
@@ -37,130 +46,145 @@ export type ImportRecord = {
   mensaje?: string;
 };
 
-const mockLocations: Location[] = [
-  {
-    id: '1',
-    codigo: 'LOC-001',
-    nombre: 'Sucursal Centro',
-    direccion: 'Av. Corrientes 1234',
-    ciudad: 'Buenos Aires',
-    provincia: 'CABA',
-    telefono: '011-4444-5555',
-    email: 'centro@empresa.com',
-    habilitado: true,
-    fechaCreacion: '2024-01-10T10:00:00Z',
-    fechaModificacion: '2024-01-10T10:00:00Z',
-  },
-  {
-    id: '2',
-    codigo: 'LOC-002',
-    nombre: 'Sucursal Belgrano',
-    direccion: 'Av. Cabildo 2500',
-    ciudad: 'Buenos Aires',
-    provincia: 'CABA',
-    telefono: '011-4777-8888',
-    email: 'belgrano@empresa.com',
-    habilitado: true,
-    fechaCreacion: '2024-01-11T11:30:00Z',
-    fechaModificacion: '2024-01-11T11:30:00Z',
-  },
-];
+// =============================================================================
+// COMPONENTE
+// =============================================================================
 
 export default function LocationsPage() {
-  const [locations, setLocations] = useState<Location[]>(mockLocations);
-  const [currentView, setCurrentView] = useState<LocationView>('list');
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  // -------------------------------------------------------------------------
+  // ESTADO LOCAL
+  // -------------------------------------------------------------------------
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-  const handleCreateLocation = () => {
-    setSelectedLocation(null);
-    setCurrentView('create');
+  // -------------------------------------------------------------------------
+  // REACT QUERY HOOKS
+  // -------------------------------------------------------------------------
+  const { data: storesData, isLoading } = useStores();
+  const createStore = useCreateStore();
+  const updateStore = useUpdateStore();
+  const toggleStatus = useToggleStoreStatus();
+
+  const stores = storesData?.data ?? [];
+
+  // -------------------------------------------------------------------------
+  // HOOK DE CONFIRMACIÓN
+  // -------------------------------------------------------------------------
+  const { confirmState, requestToggle, cancel, confirm } = useConfirmAction<Store>({
+    onToggle: (id, currentActive) => {
+      toggleStatus.mutate({ id, enable: !currentActive });
+    },
+  });
+
+  const dialogTexts = getConfirmDialogTexts(
+    confirmState.type,
+    confirmState.item,
+    'Local',
+    (store) => store.name
+  );
+
+  // -------------------------------------------------------------------------
+  // HANDLERS DE NAVEGACIÓN
+  // -------------------------------------------------------------------------
+  const handleCreate = () => {
+    setSelectedStore(null);
+    setViewMode('create');
   };
 
-  const handleEditLocation = (location: Location) => {
-    setSelectedLocation(location);
-    setCurrentView('edit');
-  };
-
-  const handleSaveLocation = (location: Omit<Location, 'id' | 'fechaCreacion' | 'fechaModificacion'>) => {
-    const now = new Date().toISOString();
-
-    if (selectedLocation) {
-      setLocations(locations.map(l =>
-        l.id === selectedLocation.id
-          ? { ...location, id: l.id, fechaCreacion: l.fechaCreacion, fechaModificacion: now }
-          : l
-      ));
-    } else {
-      const newLocation: Location = {
-        ...location,
-        id: String(Date.now()),
-        fechaCreacion: now,
-        fechaModificacion: now,
-      };
-      setLocations([newLocation, ...locations]);
-    }
-
-    setCurrentView('list');
-    setSelectedLocation(null);
-  };
-
-  const handleToggleEnabled = (locationId: string) => {
-    setLocations(locations.map(l =>
-      l.id === locationId
-        ? { ...l, habilitado: !l.habilitado, fechaModificacion: new Date().toISOString() }
-        : l
-    ));
+  const handleEdit = (store: Store) => {
+    setSelectedStore(store);
+    setViewMode('edit');
   };
 
   const handleImport = () => {
-    setCurrentView('import');
+    setViewMode('import');
+  };
+
+  const handleBackToList = () => {
+    setViewMode('list');
+    setSelectedStore(null);
+    setImportResult(null);
+  };
+
+  // -------------------------------------------------------------------------
+  // HANDLERS DE FORMULARIO
+  // -------------------------------------------------------------------------
+  const handleSaveStore = (data: CreateStoreDTO | UpdateStoreDTO) => {
+    if (selectedStore) {
+      updateStore.mutate(
+        { id: selectedStore.id, data: data as UpdateStoreDTO },
+        { onSuccess: handleBackToList }
+      );
+    } else {
+      createStore.mutate(data as CreateStoreDTO, { onSuccess: handleBackToList });
+    }
+  };
+
+  const handleToggleStatus = (store: Store) => {
+    requestToggle(store, store.active);
   };
 
   const handleImportComplete = (result: ImportResult) => {
     setImportResult(result);
-    setCurrentView('report');
+    setViewMode('report');
   };
 
-  const handleBackToList = () => {
-    setCurrentView('list');
-    setSelectedLocation(null);
-    setImportResult(null);
-  };
-
+  // -------------------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------------------
   return (
     <>
-      {currentView === 'list' && (
+      {/* Vista: Lista */}
+      {viewMode === 'list' && (
         <LocationList
-          locations={locations}
-          onCreateLocation={handleCreateLocation}
-          onEditLocation={handleEditLocation}
-          onToggleEnabled={handleToggleEnabled}
+          stores={stores}
+          isLoading={isLoading}
+          onCreateStore={handleCreate}
+          onEditStore={handleEdit}
+          onToggleStatus={handleToggleStatus}
           onImport={handleImport}
         />
       )}
 
-      {(currentView === 'create' || currentView === 'edit') && (
+      {/* Vista: Crear/Editar */}
+      {(viewMode === 'create' || viewMode === 'edit') && (
         <LocationForm
-          location={selectedLocation}
-          onSave={handleSaveLocation}
+          store={selectedStore}
+          onSave={handleSaveStore}
           onCancel={handleBackToList}
+          isSubmitting={createStore.isPending || updateStore.isPending}
         />
       )}
 
-      {currentView === 'import' && (
+      {/* Vista: Importar */}
+      {viewMode === 'import' && (
         <LocationImport
           onImportComplete={handleImportComplete}
           onCancel={handleBackToList}
         />
       )}
 
-      {currentView === 'report' && importResult && (
+      {/* Vista: Reporte de Importación */}
+      {viewMode === 'report' && importResult && (
         <LocationImportReport
           result={importResult}
           onBack={handleBackToList}
         />
       )}
+
+      {/* Diálogo de Confirmación */}
+      <ConfirmDialog
+        open={confirmState.isOpen}
+        onOpenChange={(open) => !open && cancel()}
+        title={dialogTexts.title}
+        description={dialogTexts.description}
+        confirmText={dialogTexts.confirmText}
+        cancelText="Cancelar"
+        variant={confirmState.type === 'delete' ? 'destructive' : 'default'}
+        onConfirm={confirm}
+        isLoading={toggleStatus.isPending}
+      />
     </>
   );
 }

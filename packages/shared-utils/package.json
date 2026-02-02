@@ -1,0 +1,19 @@
+{
+  "name": "@framework/shared-utils",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": ">=5.0.0",
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "@types/react": "^19",
+    "react": "^19.2.3",
+    "typescript": "^5"
+  }
+}

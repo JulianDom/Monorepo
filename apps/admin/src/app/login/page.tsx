@@ -5,14 +5,15 @@ import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, Mail, Lock, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ShieldCheck, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import type { ApiError } from '@/types/api.types';
 
 export default function LoginPage() {
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,10 +24,15 @@ export default function LoginPage() {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       await login({ email, password });
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message || 'Error al iniciar sesión. Verifique sus credenciales.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -69,7 +75,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                   className="pl-10"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -85,13 +91,20 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="pl-10"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando sesión...
+                </>
+              ) : (
+                'Iniciar sesión'
+              )}
             </Button>
           </form>
 
@@ -103,17 +116,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Demo credentials */}
-        <div className="mt-4 rounded-lg bg-muted border border-border p-4">
-          <p className="text-sm text-foreground font-semibold mb-2">
-            Credenciales de prueba:
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Email: admin@example.com
-            <br />
-            Contraseña: cualquier contraseña
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
-import { ShieldCheck, Search, Plus, Edit, Trash2, UserX, UserCheck, ArrowUpDown } from 'lucide-react';
-import { useState } from 'react';
+'use client';
+
+import { ShieldCheck, Search, Plus, Edit, UserX, UserCheck, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,107 +13,68 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Admin } from '@/app/(dashboard)/dashboard/admins/page';
 import { Pagination } from '@/components/shared/pagination';
+import { useDataTable, useDebounce } from '@/hooks';
+import type { Admin } from '../types';
+
+// ============================================
+// TIPOS
+// ============================================
 
 interface AdminListProps {
   admins: Admin[];
+  isLoading?: boolean;
   onCreateAdmin: () => void;
   onEditAdmin: (admin: Admin) => void;
   onToggleStatus: (admin: Admin) => void;
-  onDeleteAdmin: (admin: Admin) => void;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  statusFilter: 'all' | 'active' | 'inactive';
-  onStatusFilterChange: (value: 'all' | 'active' | 'inactive') => void;
 }
 
-type SortField = 'name' | 'email' | 'role' | 'lastLogin';
-type SortOrder = 'asc' | 'desc';
+type AdminFilter = 'all' | 'active' | 'inactive';
+
+// ============================================
+// COMPONENTE
+// ============================================
 
 export function AdminList({
   admins,
+  isLoading,
   onCreateAdmin,
   onEditAdmin,
   onToggleStatus,
-  onDeleteAdmin,
-  searchTerm,
-  onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
 }: AdminListProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  // Hook reutilizable para manejo de tabla
+  const {
+    items,
+    filteredCount,
+    searchQuery,
+    setSearchQuery,
+    filter,
+    setFilter,
+    toggleSort,
+    getSortIcon,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+  } = useDataTable<Admin, AdminFilter>({
+    data: admins,
+    searchFields: ['fullName', 'email', 'username'],
+    defaultSort: { field: 'fullName', direction: 'asc' },
+    filterOptions: { field: 'enabled' },
+    defaultFilter: 'all',
+    itemsPerPage: 10,
+  });
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-    setCurrentPage(1);
+  // Debounce para la búsqueda
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
   };
 
-  const filteredAdmins = admins.filter((admin) => {
-    const matchesSearch =
-      admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      admin.role.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && admin.isActive) ||
-      (statusFilter === 'inactive' && !admin.isActive);
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // Sort admins
-  const sortedAdmins = [...filteredAdmins].sort((a, b) => {
-    let comparison = 0;
-    
-    if (sortField === 'name') {
-      comparison = a.name.localeCompare(b.name);
-    } else if (sortField === 'email') {
-      comparison = a.email.localeCompare(b.email);
-    } else if (sortField === 'role') {
-      comparison = a.role.localeCompare(b.role);
-    } else if (sortField === 'lastLogin') {
-      const aDate = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
-      const bDate = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
-      comparison = aDate - bDate;
-    }
-    
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(sortedAdmins.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedAdmins = sortedAdmins.slice(startIndex, startIndex + itemsPerPage);
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Nunca';
-    
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Hace menos de 1 hora';
-    if (diffInHours < 24) return `Hace ${diffInHours} horas`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays === 1) return 'Hace 1 día';
-    if (diffInDays < 7) return `Hace ${diffInDays} días`;
-    
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+  // Icono de ordenamiento
+  const SortIcon = ({ field }: { field: keyof Admin }) => {
+    const direction = getSortIcon(field);
+    if (direction === 'asc') return <ArrowUp className="h-4 w-4" />;
+    if (direction === 'desc') return <ArrowDown className="h-4 w-4" />;
+    return <ArrowUpDown className="h-4 w-4 opacity-50" />;
   };
 
   return (
@@ -136,15 +98,15 @@ export function AdminList({
         </Button>
       </div>
 
-      {/* Search and Stats */}
+      {/* Search */}
       <div className="grid gap-4 md:grid-cols-4">
         <div className="md:col-span-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nombre, email o rol"
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Buscar por nombre, email o usuario"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -159,49 +121,40 @@ export function AdminList({
               <TableRow>
                 <TableHead>
                   <button
-                    onClick={() => handleSort('name')}
+                    onClick={() => toggleSort('fullName')}
                     className="flex items-center gap-2 hover:text-foreground transition-colors"
                   >
                     Nombre
-                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                    <SortIcon field="fullName" />
                   </button>
                 </TableHead>
                 <TableHead>
                   <button
-                    onClick={() => handleSort('email')}
+                    onClick={() => toggleSort('email')}
                     className="flex items-center gap-2 hover:text-foreground transition-colors"
                   >
                     Correo electrónico
-                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                    <SortIcon field="email" />
                   </button>
                 </TableHead>
-                {/* <TableHead>
-                  <button
-                    onClick={() => handleSort('role')}
-                    className="flex items-center gap-2 hover:text-foreground transition-colors"
-                  >
-                    Rol
-                    <ArrowUpDown className="h-4 w-4 opacity-50" />
-                  </button>
-                </TableHead> 
                 <TableHead>
                   <button
-                    onClick={() => handleSort('lastLogin')}
+                    onClick={() => toggleSort('username')}
                     className="flex items-center gap-2 hover:text-foreground transition-colors"
                   >
-                    Último acceso
-                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                    Usuario
+                    <SortIcon field="username" />
                   </button>
-                </TableHead>*/}
+                </TableHead>
                 <TableHead>
-                  <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+                  <Select value={filter} onValueChange={(v) => setFilter(v as AdminFilter)}>
                     <SelectTrigger className="w-full border-0 shadow-none hover:bg-muted/50 focus:ring-0 h-auto p-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos los estados</SelectItem>
-                      <SelectItem value="active">Activos</SelectItem>
-                      <SelectItem value="inactive">Inactivos</SelectItem>
+                      <SelectItem value="active">Habilitados</SelectItem>
+                      <SelectItem value="inactive">Deshabilitados</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableHead>
@@ -209,9 +162,18 @@ export function AdminList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedAdmins.length === 0 ? (
+              {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center">
+                  <TableCell colSpan={5} className="h-32 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+                      <p className="text-muted-foreground">Cargando administradores...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <UserX className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">
@@ -221,34 +183,35 @@ export function AdminList({
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedAdmins.map((admin) => (
-                  <TableRow key={admin.id}>
+                items.map((admin) => (
+                  <TableRow 
+                    key={admin.id}
+                    className="cursor-pointer"
+                    onClick={() => onEditAdmin(admin)}
+                  >
                     <TableCell>
-                      <div className="font-medium text-foreground">{admin.name}</div>
+                      <div className="font-medium text-foreground">{admin.fullName}</div>
                     </TableCell>
                     <TableCell className="text-foreground">{admin.email}</TableCell>
-                    {/* <TableCell className="text-foreground">{admin.role}</TableCell> 
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(admin.lastLogin)}
-                    </TableCell> */}
+                    <TableCell className="text-muted-foreground">{admin.username}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={admin.isActive ? 'default' : 'secondary'}
+                        variant={admin.enabled ? 'default' : 'secondary'}
                         className={
-                          admin.isActive
+                          admin.enabled
                             ? 'bg-green-600 text-white hover:bg-green-700 border-0'
                             : 'bg-muted text-muted-foreground hover:bg-muted border-0'
                         }
                       >
-                        {admin.isActive ? (
+                        {admin.enabled ? (
                           <span className="flex items-center gap-1">
                             <UserCheck className="h-3 w-3" />
-                            Activo
+                            Habilitado
                           </span>
                         ) : (
                           <span className="flex items-center gap-1">
                             <UserX className="h-3 w-3" />
-                            Inactivo
+                            Deshabilitado
                           </span>
                         )}
                       </Badge>
@@ -258,7 +221,10 @@ export function AdminList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEditAdmin(admin)}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            onEditAdmin(admin);
+                          }}
                           className="h-8 w-8 p-0 hover:bg-accent"
                           title="Editar"
                         >
@@ -267,24 +233,18 @@ export function AdminList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onToggleStatus(admin)}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            onToggleStatus(admin);
+                          }}
                           className="h-8 w-8 p-0 hover:bg-accent"
-                          title={admin.isActive ? 'Deshabilitar' : 'Habilitar'}
+                          title={admin.enabled ? 'Deshabilitar' : 'Habilitar'}
                         >
-                          {admin.isActive ? (
+                          {admin.enabled ? (
                             <UserX className="h-4 w-4" />
                           ) : (
                             <UserCheck className="h-4 w-4" />
                           )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeleteAdmin(admin)}
-                          className="h-8 w-8 p-0 hover:bg-accent"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -294,16 +254,16 @@ export function AdminList({
             </TableBody>
           </Table>
         </div>
-        
+
         {/* Pagination */}
-        {sortedAdmins.length > 0 && (
+        {filteredCount > 0 && (
           <div className="border-t border-border px-4 md:px-6">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              totalItems={sortedAdmins.length}
+              itemsPerPage={10}
+              totalItems={filteredCount}
             />
           </div>
         )}

@@ -76,6 +76,12 @@ export const ENDPOINTS = {
     ME: '/auth/me',
   },
   USERS: '/users',
+  ADMINS: '/administrators',
+  PRODUCTS: '/products',
+  STORES: '/stores',
+  OPERATIVE_USERS: '/operative-users',
+  PRICE_RECORDS: '/price-records',
+  
   // Agregar más endpoints según necesidad
 } as const;
 

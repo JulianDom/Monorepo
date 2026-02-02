@@ -52,16 +52,22 @@ class ApiClient {
     if (error.response) {
       // Error de respuesta del servidor
       const { data, status } = error.response;
-      
-      if (status === 401) {
-        // No autenticado - redirigir a login
+      const requestUrl = error.config?.url || '';
+
+      // Verificar si es una request de autenticación
+      const isAuthRequest = requestUrl.includes('/auth/');
+
+      if (status === 401 && !isAuthRequest) {
+        // No autenticado en ruta protegida - redirigir a login
+        // NO redirigir si es una request de auth (login, refresh, etc.)
         if (typeof window !== 'undefined') {
           localStorage.removeItem(env.authTokenKey);
+          localStorage.removeItem(env.authRefreshTokenKey);
           localStorage.removeItem(env.authUserKey);
           window.location.href = '/login';
         }
       }
-      
+
       return {
         message: data?.message || 'Error en la solicitud',
         code: data?.code,

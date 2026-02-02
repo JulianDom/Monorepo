@@ -222,7 +222,11 @@ export function AdminList({
                 </TableRow>
               ) : (
                 paginatedAdmins.map((admin) => (
-                  <TableRow key={admin.id}>
+                  <TableRow 
+                    key={admin.id}
+                    className="cursor-pointer"
+                    onClick={() => onEditAdmin(admin)}
+                  >
                     <TableCell>
                       <div className="font-medium text-foreground">{admin.name}</div>
                     </TableCell>
@@ -258,7 +262,10 @@ export function AdminList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEditAdmin(admin)}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            onEditAdmin(admin);
+                          }}
                           className="h-8 w-8 p-0 hover:bg-accent"
                           title="Editar"
                         >
@@ -267,7 +274,10 @@ export function AdminList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onToggleStatus(admin)}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            onToggleStatus(admin);
+                          }}
                           className="h-8 w-8 p-0 hover:bg-accent"
                           title={admin.isActive ? 'Deshabilitar' : 'Habilitar'}
                         >
@@ -280,7 +290,10 @@ export function AdminList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDeleteAdmin(admin)}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            onDeleteAdmin(admin);
+                          }}
                           className="h-8 w-8 p-0 hover:bg-accent"
                           title="Eliminar"
                         >

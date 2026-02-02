@@ -1,58 +1,67 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User, Mail, Phone, Lock, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, User, Mail, AtSign, Lock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import type { Operative } from '@/app/(dashboard)/dashboard/operatives/page';
+import type {
+  PersistedOperativeUserProps,
+  CreateOperativeUserDTO,
+  UpdateOperativeUserDTO,
+} from '@framework/shared-types';
 
 interface OperativeFormProps {
   mode: 'create' | 'edit';
-  operative: Operative | null;
-  onSave: (data: Omit<Operative, 'id' | 'createdAt' | 'lastAccess'>) => void;
+  operative: PersistedOperativeUserProps | null;
+  onSave: (data: CreateOperativeUserDTO | UpdateOperativeUserDTO) => void;
   onCancel: () => void;
 }
 
 interface FormData {
-  name: string;
-  email: string;
-  phone: string;
+  fullName: string;
+  emailAddress: string;
+  username: string;
   password: string;
   confirmPassword: string;
 }
 
 interface FormErrors {
-  name?: string;
-  email?: string;
-  phone?: string;
+  fullName?: string;
+  emailAddress?: string;
+  username?: string;
   password?: string;
   confirmPassword?: string;
 }
 
-export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFormProps) {
-  const [formData, setFormData] = useState<FormData>({
-    name: operative?.name || '',
-    email: operative?.email || '',
-    phone: operative?.phone || '',
-    password: '',
-    confirmPassword: '',
-  });
+/**
+ * IMPORTANTE: Valores por defecto para inputs controlados
+ *
+ * Siempre usar '' (string vacio) como valor por defecto, NUNCA undefined.
+ * Esto previene el error: "A component is changing a controlled input to be uncontrolled"
+ *
+ * @see https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable
+ */
+const getInitialFormData = (operative: PersistedOperativeUserProps | null): FormData => ({
+  fullName: operative?.fullName ?? '',
+  emailAddress: operative?.emailAddress ?? '',
+  username: operative?.username ?? '',
+  password: '',
+  confirmPassword: '',
+});
 
+export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFormProps) {
+  // IMPORTANTE: Usar funcion para inicializar estado con valores por defecto seguros
+  const [formData, setFormData] = useState<FormData>(() => getInitialFormData(operative));
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Actualizar formData cuando cambia operative
   useEffect(() => {
-    if (operative) {
-      setFormData({
-        name: operative.name,
-        email: operative.email,
-        phone: operative.phone || '',
-        password: '',
-        confirmPassword: '',
-      });
-    }
+    setFormData(getInitialFormData(operative));
   }, [operative]);
 
   const validateEmail = (email: string): boolean => {
@@ -60,37 +69,32 @@ export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFo
     return emailRegex.test(email);
   };
 
-  const validatePhone = (phone: string): boolean => {
-    if (!phone) return true; // El teléfono es opcional
-    // Formato flexible para números argentinos
-    const phoneRegex = /^(\+54\s?)?(\d{2,4})[\s-]?\d{4}[\s-]?\d{4}$/;
-    return phoneRegex.test(phone);
-  };
-
   const validateField = (name: keyof FormData, value: string): string | undefined => {
     switch (name) {
-      case 'name':
+      case 'fullName':
         if (!value.trim()) return 'El nombre es requerido';
         if (value.trim().length < 3) return 'El nombre debe tener al menos 3 caracteres';
         return undefined;
 
-      case 'email':
-        if (!value.trim()) return 'El correo electrónico es requerido';
-        if (!validateEmail(value)) return 'Formato de correo electrónico inválido';
+      case 'emailAddress':
+        if (!value.trim()) return 'El correo electronico es requerido';
+        if (!validateEmail(value)) return 'Formato de correo electronico invalido';
         return undefined;
 
-      case 'phone':
-        if (value && !validatePhone(value)) return 'Formato de teléfono inválido';
+      case 'username':
+        if (!value.trim()) return 'El nombre de usuario es requerido';
+        if (value.trim().length < 3) return 'El usuario debe tener al menos 3 caracteres';
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Solo letras, numeros y guion bajo';
         return undefined;
 
       case 'password':
-        if (mode === 'create' && !value) return 'La contraseña es requerida';
-        if (value && value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+        if (mode === 'create' && !value) return 'La contrasena es requerida';
+        if (value && value.length < 6) return 'La contrasena debe tener al menos 6 caracteres';
         return undefined;
 
       case 'confirmPassword':
-        if (mode === 'create' && !value) return 'Debes confirmar la contraseña';
-        if (value && value !== formData.password) return 'Las contraseñas no coinciden';
+        if (mode === 'create' && !value) return 'Debes confirmar la contrasena';
+        if (value && value !== formData.password) return 'Las contrasenas no coinciden';
         return undefined;
 
       default:
@@ -100,14 +104,14 @@ export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFo
 
   const handleChange = (name: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-    
+
     // Validar el campo actual
     if (touched[name]) {
       const error = validateField(name, value);
       setErrors((prev) => ({ ...prev, [name]: error }));
     }
 
-    // Si cambia la contraseña, revalidar confirmación
+    // Si cambia la contrasena, revalidar confirmacion
     if (name === 'password' && touched.confirmPassword) {
       const confirmError = validateField('confirmPassword', formData.confirmPassword);
       setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
@@ -134,9 +138,9 @@ export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFo
 
     setErrors(newErrors);
     setTouched({
-      name: true,
-      email: true,
-      phone: true,
+      fullName: true,
+      emailAddress: true,
+      username: true,
       password: true,
       confirmPassword: true,
     });
@@ -156,27 +160,27 @@ export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFo
 
     setIsSaving(true);
 
-    // Simular guardado
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    onSave({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim() || undefined,
-      status: operative?.status || 'active',
-    });
-
-    toast.success(
-      mode === 'create' ? 'Usuario operativo creado' : 'Usuario operativo actualizado',
-      {
-        description:
-          mode === 'create'
-            ? `${formData.name} ha sido creado correctamente.`
-            : `Los cambios en ${formData.name} se guardaron correctamente.`,
+    try {
+      if (mode === 'create') {
+        // API usa 'email' en DTO, no 'emailAddress'
+        const createData: CreateOperativeUserDTO = {
+          fullName: formData.fullName.trim(),
+          email: formData.emailAddress.trim(),
+          username: formData.username.trim(),
+          password: formData.password,
+        };
+        onSave(createData);
+      } else {
+        // API usa 'email' en DTO, no 'emailAddress'
+        const updateData: UpdateOperativeUserDTO = {
+          fullName: formData.fullName.trim(),
+          email: formData.emailAddress.trim(),
+        };
+        onSave(updateData);
       }
-    );
-
-    setIsSaving(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -209,164 +213,157 @@ export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFo
       <form onSubmit={handleSubmit} className="max-w-2xl">
         <Card className="p-6">
           <div className="space-y-6">
-            {/* Información Personal */}
+            {/* Informacion Personal */}
             <div className="space-y-4">
               <h2 className="text-foreground font-semibold pb-2 border-b border-border">
-                Información Personal
+                Informacion Personal
               </h2>
 
-              {/* Nombre */}
+              {/* Nombre completo */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-foreground">
+                <Label htmlFor="fullName" className="text-foreground">
                   Nombre completo <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="name"
+                    id="fullName"
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => handleChange('name', e.target.value)}
-                    onBlur={() => handleBlur('name')}
-                    placeholder="Ej: Roberto Sánchez"
-                    className={`pl-10 ${errors.name && touched.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    value={formData.fullName}
+                    onChange={(e) => handleChange('fullName', e.target.value)}
+                    onBlur={() => handleBlur('fullName')}
+                    placeholder="Ej: Roberto Sanchez"
+                    className={`pl-10 ${errors.fullName && touched.fullName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     disabled={isSaving}
                   />
                 </div>
-                {errors.name && touched.name && (
+                {errors.fullName && touched.fullName && (
                   <p className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    {errors.name}
+                    {errors.fullName}
                   </p>
                 )}
               </div>
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground">
-                  Correo electrónico <span className="text-destructive">*</span>
+                <Label htmlFor="emailAddress" className="text-foreground">
+                  Correo electronico <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="email"
+                    id="emailAddress"
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    onBlur={() => handleBlur('email')}
+                    value={formData.emailAddress}
+                    onChange={(e) => handleChange('emailAddress', e.target.value)}
+                    onBlur={() => handleBlur('emailAddress')}
                     placeholder="usuario@empresa.com"
-                    className={`pl-10 ${errors.email && touched.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    className={`pl-10 ${errors.emailAddress && touched.emailAddress ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     disabled={isSaving}
                   />
                 </div>
-                {errors.email && touched.email && (
+                {errors.emailAddress && touched.emailAddress && (
                   <p className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    {errors.email}
+                    {errors.emailAddress}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Este correo se usará para el inicio de sesión
-                </p>
               </div>
 
-              {/* Teléfono */}
+              {/* Username */}
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-foreground">
-                  Teléfono
+                <Label htmlFor="username" className="text-foreground">
+                  Nombre de usuario <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    onBlur={() => handleBlur('phone')}
-                    placeholder="+54 11 2345-6789"
-                    className={`pl-10 ${errors.phone && touched.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                    disabled={isSaving}
+                    id="username"
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => handleChange('username', e.target.value)}
+                    onBlur={() => handleBlur('username')}
+                    placeholder="rsanchez"
+                    className={`pl-10 ${errors.username && touched.username ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    disabled={isSaving || mode === 'edit'}
                   />
                 </div>
-                {errors.phone && touched.phone && (
+                {errors.username && touched.username && (
                   <p className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    {errors.phone}
+                    {errors.username}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Opcional. Formato: +54 11 2345-6789
+                  {mode === 'edit'
+                    ? 'El nombre de usuario no puede modificarse'
+                    : 'Solo letras, numeros y guion bajo. Se usara para iniciar sesion'}
                 </p>
               </div>
             </div>
 
             {/* Credenciales */}
-            <div className="space-y-4">
-              <h2 className="text-foreground font-semibold pb-2 border-b border-border">
-                {mode === 'create' ? 'Credenciales de Acceso' : 'Cambiar Contraseña'}
-              </h2>
+            {mode === 'create' && (
+              <div className="space-y-4">
+                <h2 className="text-foreground font-semibold pb-2 border-b border-border">
+                  Credenciales de Acceso
+                </h2>
 
-              {mode === 'edit' && (
-                <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
-                  Deja estos campos vacíos si no deseas cambiar la contraseña
-                </p>
-              )}
-
-              {/* Contraseña */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">
-                  Contraseña {mode === 'create' && <span className="text-destructive">*</span>}
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleChange('password', e.target.value)}
-                    onBlur={() => handleBlur('password')}
-                    placeholder="••••••••"
-                    className={`pl-10 ${errors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                    disabled={isSaving}
-                  />
+                {/* Contrasena */}
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground">
+                    Contrasena <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => handleChange('password', e.target.value)}
+                      onBlur={() => handleBlur('password')}
+                      placeholder="********"
+                      className={`pl-10 ${errors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  {errors.password && touched.password && (
+                    <p className="text-sm text-destructive flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {errors.password}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Minimo 6 caracteres</p>
                 </div>
-                {errors.password && touched.password && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {errors.password}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Mínimo 6 caracteres
-                </p>
-              </div>
 
-              {/* Confirmar Contraseña */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-foreground">
-                  Confirmar contraseña {mode === 'create' && <span className="text-destructive">*</span>}
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                    onBlur={() => handleBlur('confirmPassword')}
-                    placeholder="••••••••"
-                    className={`pl-10 ${errors.confirmPassword && touched.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                    disabled={isSaving}
-                  />
+                {/* Confirmar Contrasena */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-foreground">
+                    Confirmar contrasena <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                      onBlur={() => handleBlur('confirmPassword')}
+                      placeholder="********"
+                      className={`pl-10 ${errors.confirmPassword && touched.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  {errors.confirmPassword && touched.confirmPassword && (
+                    <p className="text-sm text-destructive flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {errors.confirmPassword}
+                    </p>
+                  )}
                 </div>
-                {errors.confirmPassword && touched.confirmPassword && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {errors.confirmPassword}
-                  </p>
-                )}
               </div>
-            </div>
+            )}
 
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-border">
@@ -379,11 +376,7 @@ export function OperativeForm({ mode, operative, onSave, onCancel }: OperativeFo
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="w-full sm:w-auto gap-2"
-              >
+              <Button type="submit" disabled={isSaving} className="w-full sm:w-auto gap-2">
                 {isSaving ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

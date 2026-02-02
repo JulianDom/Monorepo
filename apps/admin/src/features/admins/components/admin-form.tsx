@@ -1,49 +1,41 @@
+'use client';
+
 import { useState } from 'react';
-import { ArrowLeft, ShieldCheck, AlertCircle, Mail, User, Shield, Save, Lock } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, AlertCircle, Mail, User, Save, Lock, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Admin } from '@/app/(dashboard)/dashboard/admins/page';
-import { Switch } from '@/components/ui/switch';
+import type { Admin, CreateAdminDTO, UpdateAdminDTO } from '@framework/shared-types';
 
 interface AdminFormProps {
   mode: 'create' | 'edit';
   initialData: Admin | null;
-  onSave: (data: Omit<Admin, 'id' | 'createdAt' | 'lastLogin'>) => void;
+  onSave: (data: CreateAdminDTO | UpdateAdminDTO) => void;
   onCancel: () => void;
+  isLoading?: boolean;
 }
 
-const ADMIN_ROLES = [
-  'Administrador General',
-  'Administrador de Usuarios',
-  'Administrador de Contenido',
-  'Administrador de Reportes',
-  'Administrador de Configuración',
-];
-
-export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProps) {
+export function AdminForm({ mode, initialData, onSave, onCancel, isLoading }: AdminFormProps) {
   const [formData, setFormData] = useState({
-    name: initialData?.name || '',
+    fullName: initialData?.fullName || '',
     email: initialData?.email || '',
-    role: initialData?.role || '',
-    isActive: initialData?.isActive ?? true,
+    username: initialData?.username || '',
     password: '',
     confirmPassword: '',
   });
 
   const [errors, setErrors] = useState<{
-    name?: string;
+    fullName?: string;
     email?: string;
-    role?: string;
+    username?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
 
   const [touched, setTouched] = useState<{
-    name?: boolean;
+    fullName?: boolean;
     email?: boolean;
-    role?: boolean;
+    username?: boolean;
     password?: boolean;
     confirmPassword?: boolean;
   }>({});
@@ -53,17 +45,22 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
     return emailRegex.test(email);
   };
 
+  const validateUsername = (username: string): boolean => {
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    return usernameRegex.test(username);
+  };
+
   const validateField = (field: keyof typeof formData, value: string) => {
     const newErrors = { ...errors };
 
     switch (field) {
-      case 'name':
+      case 'fullName':
         if (!value.trim()) {
-          newErrors.name = 'El nombre es requerido';
+          newErrors.fullName = 'El nombre es requerido';
         } else if (value.trim().length < 3) {
-          newErrors.name = 'El nombre debe tener al menos 3 caracteres';
+          newErrors.fullName = 'El nombre debe tener al menos 3 caracteres';
         } else {
-          delete newErrors.name;
+          delete newErrors.fullName;
         }
         break;
 
@@ -77,11 +74,15 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
         }
         break;
 
-      case 'role':
-        if (!value) {
-          newErrors.role = 'El rol es requerido';
+      case 'username':
+        if (!value.trim()) {
+          newErrors.username = 'El nombre de usuario es requerido';
+        } else if (value.trim().length < 3) {
+          newErrors.username = 'El usuario debe tener al menos 3 caracteres';
+        } else if (!validateUsername(value)) {
+          newErrors.username = 'Solo se permiten letras, números y guiones bajos';
         } else {
-          delete newErrors.role;
+          delete newErrors.username;
         }
         break;
 
@@ -134,27 +135,27 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
 
     // Mark all fields as touched
     setTouched({
-      name: true,
+      fullName: true,
       email: true,
-      role: true,
+      username: true,
       password: true,
       confirmPassword: true,
     });
 
     // Validate all fields
-    validateField('name', formData.name);
+    validateField('fullName', formData.fullName);
     validateField('email', formData.email);
-    validateField('role', formData.role);
+    validateField('username', formData.username);
     validateField('password', formData.password);
     validateField('confirmPassword', formData.confirmPassword);
 
     // Check if there are any errors
-    const hasErrors = 
-      !formData.name.trim() ||
-      formData.name.trim().length < 3 ||
+    const hasErrors =
+      !formData.fullName.trim() ||
+      formData.fullName.trim().length < 3 ||
       !formData.email.trim() ||
       !validateEmail(formData.email) ||
-      !formData.role ||
+      (mode === 'create' && (!formData.username.trim() || formData.username.trim().length < 3 || !validateUsername(formData.username))) ||
       (mode === 'create' && (!formData.password || formData.password.length < 6)) ||
       (mode === 'create' && formData.password !== formData.confirmPassword) ||
       (mode === 'edit' && formData.password && formData.password.length < 6) ||
@@ -164,14 +165,20 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
       return;
     }
 
-    // Don't send empty password in edit mode
-    const dataToSave = { ...formData };
-    if (mode === 'edit' && !formData.password) {
-      delete (dataToSave as any).password;
-      delete (dataToSave as any).confirmPassword;
+    if (mode === 'create') {
+      const createData: CreateAdminDTO = {
+        fullName: formData.fullName,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+      };
+      onSave(createData);
+    } else {
+      const updateData: UpdateAdminDTO = {
+        fullName: formData.fullName,
+      };
+      onSave(updateData);
     }
-
-    onSave(dataToSave);
   };
 
   return (
@@ -215,24 +222,24 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
               <h4 className="font-medium text-foreground">Información Personal</h4>
             </div>
 
-            {/* Name */}
+            {/* Full Name */}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-foreground">
+              <Label htmlFor="fullName" className="text-foreground">
                 Nombre completo <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="name"
+                id="fullName"
                 type="text"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                onBlur={() => handleBlur('name')}
+                value={formData.fullName}
+                onChange={(e) => handleChange('fullName', e.target.value)}
+                onBlur={() => handleBlur('fullName')}
                 placeholder="Ej: Carlos Rodríguez"
-                className={errors.name && touched.name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                className={errors.fullName && touched.fullName ? 'border-destructive focus-visible:ring-destructive' : ''}
               />
-              {errors.name && touched.name && (
+              {errors.fullName && touched.fullName && (
                 <p className="text-sm text-destructive flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  {errors.name}
+                  {errors.fullName}
                 </p>
               )}
             </div>
@@ -251,6 +258,7 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
                   onChange={(e) => handleChange('email', e.target.value)}
                   onBlur={() => handleBlur('email')}
                   placeholder="correo@empresa.com"
+                  disabled={mode === 'edit'}
                   className={`pl-10 ${errors.email && touched.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
               </div>
@@ -260,78 +268,125 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
                   {errors.email}
                 </p>
               )}
-            </div>
-          </div>
-
-          {/* Credenciales */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-border">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              <h4 className="font-medium text-foreground">
-                {mode === 'create' ? 'Credenciales de Acceso' : 'Cambiar Contraseña'}
-              </h4>
+              {mode === 'edit' && (
+                <p className="text-xs text-muted-foreground">
+                  El correo electrónico no puede ser modificado
+                </p>
+              )}
             </div>
 
-            {mode === 'edit' && (
-              <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
-                Deja estos campos vacíos si no deseas cambiar la contraseña
-              </p>
+            {/* Username - only for create */}
+            {mode === 'create' && (
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-foreground">
+                  Nombre de usuario <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => handleChange('username', e.target.value)}
+                    onBlur={() => handleBlur('username')}
+                    placeholder="usuario123"
+                    className={`pl-10 ${errors.username && touched.username ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                </div>
+                {errors.username && touched.username && (
+                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {errors.username}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Solo letras, números y guiones bajos
+                </p>
+              </div>
             )}
 
-            {/* Contraseña */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">
-                Contraseña {mode === 'create' && <span className="text-destructive">*</span>}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  onBlur={() => handleBlur('password')}
-                  placeholder="••••••••"
-                  className={`pl-10 ${errors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                />
-              </div>
-              {errors.password && touched.password && (
-                <p className="text-sm text-destructive flex items-center gap-1.5">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  {errors.password}
+            {/* Username display - only for edit */}
+            {mode === 'edit' && initialData && (
+              <div className="space-y-2">
+                <Label className="text-foreground">Nombre de usuario</Label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    value={initialData.username}
+                    disabled
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  El nombre de usuario no puede ser modificado
                 </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Mínimo 6 caracteres
-              </p>
-            </div>
-
-            {/* Confirmar Contraseña */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-foreground">
-                Confirmar contraseña {mode === 'create' && <span className="text-destructive">*</span>}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                  onBlur={() => handleBlur('confirmPassword')}
-                  placeholder="••••••••"
-                  className={`pl-10 ${errors.confirmPassword && touched.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                />
               </div>
-              {errors.confirmPassword && touched.confirmPassword && (
-                <p className="text-sm text-destructive flex items-center gap-1.5">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
+            )}
           </div>
-          
+
+          {/* Credenciales - only for create */}
+          {mode === 'create' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <h4 className="font-medium text-foreground">Credenciales de Acceso</h4>
+              </div>
+
+              {/* Contraseña */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-foreground">
+                  Contraseña <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleChange('password', e.target.value)}
+                    onBlur={() => handleBlur('password')}
+                    placeholder="••••••••"
+                    className={`pl-10 ${errors.password && touched.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                </div>
+                {errors.password && touched.password && (
+                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {errors.password}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Mínimo 6 caracteres
+                </p>
+              </div>
+
+              {/* Confirmar Contraseña */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-foreground">
+                  Confirmar contraseña <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                    onBlur={() => handleBlur('confirmPassword')}
+                    placeholder="••••••••"
+                    className={`pl-10 ${errors.confirmPassword && touched.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                </div>
+                {errors.confirmPassword && touched.confirmPassword && (
+                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {errors.confirmPassword}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex flex-col-reverse md:flex-row gap-3 pt-4 border-t border-border">
@@ -340,15 +395,21 @@ export function AdminForm({ mode, initialData, onSave, onCancel }: AdminFormProp
               variant="outline"
               onClick={onCancel}
               className="w-full md:w-auto"
+              disabled={isLoading}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               className="w-full md:w-auto gap-2"
+              disabled={isLoading}
             >
               <Save className="h-4 w-4" />
-              {mode === 'create' ? 'Crear Administrador' : 'Guardar Cambios'}
+              {isLoading
+                ? 'Guardando...'
+                : mode === 'create'
+                ? 'Crear Administrador'
+                : 'Guardar Cambios'}
             </Button>
           </div>
         </div>

@@ -3,13 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
-import { ROUTES } from '@/config';
+import { env, ROUTES } from '@/config';
 import { DashboardShell } from '@/components/shared/dashboard-shell';
 import { Loader2 } from 'lucide-react';
 
 /**
  * Layout para rutas protegidas del dashboard
- * Requiere autenticación
+ * Requiere autenticación (excepto si authBypass está activo)
  */
 export default function DashboardLayout({
   children,
@@ -19,11 +19,19 @@ export default function DashboardLayout({
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
+  // Auth bypass para desarrollo de UI
+  const bypassAuth = env.authBypass;
+
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!bypassAuth && !isLoading && !isAuthenticated) {
       router.push(ROUTES.LOGIN);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, bypassAuth]);
+
+  // Si hay bypass, renderizar directamente
+  if (bypassAuth) {
+    return <DashboardShell>{children}</DashboardShell>;
+  }
 
   if (isLoading) {
     return (

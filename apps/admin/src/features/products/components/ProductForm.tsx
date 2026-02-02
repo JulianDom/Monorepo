@@ -1,37 +1,36 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Product } from '@/app/(dashboard)/dashboard/products/page';
-import { toast } from 'sonner';
+import type { Product, CreateProductDTO, UpdateProductDTO } from '@framework/shared-types';
 
 interface ProductFormProps {
   product: Product | null;
-  onSave: (product: Omit<Product, 'id' | 'fechaCreacion' | 'fechaModificacion'>) => void;
+  onSave: (data: CreateProductDTO | UpdateProductDTO) => void;
   onCancel: () => void;
+  isLoading?: boolean;
 }
 
 type FormErrors = {
-  codigo?: string;
-  nombre?: string;
-  marca?: string;
-  categoria?: string;
-  precio?: string;
+  name?: string;
+  brand?: string;
+  presentation?: string;
+  price?: string;
 };
 
-export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
+export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFormProps) {
   const isEditing = !!product;
-  
+
   const [formData, setFormData] = useState({
-    codigo: product?.codigo || '',
-    nombre: product?.nombre || '',
-    descripcion: product?.descripcion || '',
-    marca: product?.marca || '',
-    categoria: product?.categoria || '',
-    precio: product?.precio.toString() || '',
-    activo: product?.activo ?? true,
+    name: product?.name || '',
+    description: product?.description || '',
+    brand: product?.brand || '',
+    presentation: product?.presentation || '',
+    price: product?.price?.toString() || '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -40,38 +39,29 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   useEffect(() => {
     if (product) {
       setFormData({
-        codigo: product.codigo,
-        nombre: product.nombre,
-        descripcion: product.descripcion,
-        marca: product.marca,
-        categoria: product.categoria,
-        precio: product.precio.toString(),
-        activo: product.activo,
+        name: product.name,
+        description: product.description || '',
+        brand: product.brand || '',
+        presentation: product.presentation,
+        price: product.price.toString(),
       });
     }
   }, [product]);
 
   const validateField = (name: string, value: string): string | undefined => {
     switch (name) {
-      case 'codigo':
-        if (!value.trim()) return 'El código es obligatorio';
-        if (value.length < 3) return 'El código debe tener al menos 3 caracteres';
-        break;
-      case 'nombre':
+      case 'name':
         if (!value.trim()) return 'El nombre es obligatorio';
         if (value.length < 3) return 'El nombre debe tener al menos 3 caracteres';
         break;
-      case 'marca':
-        if (!value.trim()) return 'La marca es obligatoria';
+      case 'presentation':
+        if (!value.trim()) return 'La presentación es obligatoria';
         break;
-      case 'categoria':
-        if (!value.trim()) return 'La categoría es obligatoria';
-        break;
-      case 'precio':
+      case 'price':
         if (!value.trim()) return 'El precio es obligatorio';
-        const precio = parseFloat(value);
-        if (isNaN(precio)) return 'El precio debe ser un número válido';
-        if (precio < 0) return 'El precio debe ser mayor o igual a 0';
+        const price = parseFloat(value);
+        if (isNaN(price)) return 'El precio debe ser un número válido';
+        if (price < 0) return 'El precio debe ser mayor o igual a 0';
         break;
     }
     return undefined;
@@ -79,40 +69,37 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (touched[name]) {
       const error = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: error }));
+      setErrors((prev) => ({ ...prev, [name]: error }));
     }
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-    
-    Object.keys(formData).forEach(key => {
-      if (key !== 'descripcion' && key !== 'activo') {
-        const error = validateField(key, formData[key as keyof typeof formData].toString());
-        if (error) {
-          newErrors[key as keyof FormErrors] = error;
-        }
+    const fieldsToValidate = ['name', 'presentation', 'price'];
+
+    fieldsToValidate.forEach((key) => {
+      const error = validateField(key, formData[key as keyof typeof formData]);
+      if (error) {
+        newErrors[key as keyof FormErrors] = error;
       }
     });
 
     setErrors(newErrors);
     setTouched({
-      codigo: true,
-      nombre: true,
-      marca: true,
-      categoria: true,
-      precio: true,
+      name: true,
+      presentation: true,
+      price: true,
     });
 
     return Object.keys(newErrors).length === 0;
@@ -120,32 +107,30 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
-      toast.error('Error de validación', {
-        description: 'Por favor, corrige los errores en el formulario.',
-      });
       return;
     }
 
-    onSave({
-      codigo: formData.codigo,
-      nombre: formData.nombre,
-      descripcion: formData.descripcion,
-      marca: formData.marca,
-      categoria: formData.categoria,
-      precio: parseFloat(formData.precio),
-      activo: formData.activo,
-    });
-
-    toast.success(
-      isEditing ? 'Producto actualizado' : 'Producto creado',
-      {
-        description: isEditing
-          ? 'El producto se actualizó correctamente.'
-          : 'El producto se creó correctamente.',
-      }
-    );
+    if (isEditing) {
+      const updateData: UpdateProductDTO = {
+        name: formData.name,
+        description: formData.description || undefined,
+        brand: formData.brand || undefined,
+        presentation: formData.presentation,
+        price: parseFloat(formData.price),
+      };
+      onSave(updateData);
+    } else {
+      const createData: CreateProductDTO = {
+        name: formData.name,
+        description: formData.description || undefined,
+        brand: formData.brand || undefined,
+        presentation: formData.presentation,
+        price: parseFloat(formData.price),
+      };
+      onSave(createData);
+    }
   };
 
   return (
@@ -156,128 +141,94 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
           <ArrowLeft className="h-4 w-4" />
           Volver al listado
         </Button>
-        
-        <div className="space-y-2">
-          <h1 className="text-foreground">
-            {isEditing ? 'Editar Producto' : 'Nuevo Producto'}
-          </h1>
-          <p className="text-muted-foreground" style={{ fontSize: 'var(--text-base)' }}>
-            {isEditing
-              ? 'Modifica los datos del producto existente'
-              : 'Completa los datos para crear un nuevo producto'}
-          </p>
+
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Package className="h-5 w-5 md:h-6 md:w-6" />
+          </div>
+          <div>
+            <h3>{isEditing ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+            <p className="text-muted-foreground text-sm">
+              {isEditing
+                ? 'Modifica los datos del producto existente'
+                : 'Completa los datos para crear un nuevo producto'}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="max-w-2xl">
         <Card className="p-6">
           <div className="space-y-6">
-            {/* Código */}
-            <div className="space-y-2">
-              <Label htmlFor="codigo">
-                Código <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="codigo"
-                name="codigo"
-                value={formData.codigo}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Ej: PROD-001"
-                className={errors.codigo && touched.codigo ? 'border-destructive' : ''}
-              />
-              {errors.codigo && touched.codigo && (
-                <p className="text-destructive" style={{ fontSize: 'var(--text-sm)' }}>
-                  {errors.codigo}
-                </p>
-              )}
-            </div>
-
             {/* Nombre */}
             <div className="space-y-2">
-              <Label htmlFor="nombre">
+              <Label htmlFor="name">
                 Nombre <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
+                id="name"
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder="Ej: Coca Cola 2.25L"
-                className={errors.nombre && touched.nombre ? 'border-destructive' : ''}
+                className={errors.name && touched.name ? 'border-destructive' : ''}
               />
-              {errors.nombre && touched.nombre && (
-                <p className="text-destructive" style={{ fontSize: 'var(--text-sm)' }}>
-                  {errors.nombre}
-                </p>
+              {errors.name && touched.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
               )}
             </div>
 
             {/* Descripción */}
             <div className="space-y-2">
-              <Label htmlFor="descripcion">
-                Descripción
-              </Label>
+              <Label htmlFor="description">Descripción</Label>
               <textarea
-                id="descripcion"
-                name="descripcion"
-                value={formData.descripcion}
+                id="description"
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
                 placeholder="Descripción opcional del producto"
                 rows={3}
-                className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                style={{ fontSize: 'var(--text-base)' }}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
               />
             </div>
 
-            {/* Marca y Categoría */}
+            {/* Marca y Presentación */}
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="marca">
-                  Marca <span className="text-destructive">*</span>
-                </Label>
+                <Label htmlFor="brand">Marca</Label>
                 <Input
-                  id="marca"
-                  name="marca"
-                  value={formData.marca}
+                  id="brand"
+                  name="brand"
+                  value={formData.brand}
                   onChange={handleChange}
-                  onBlur={handleBlur}
                   placeholder="Ej: Coca Cola"
-                  className={errors.marca && touched.marca ? 'border-destructive' : ''}
                 />
-                {errors.marca && touched.marca && (
-                  <p className="text-destructive" style={{ fontSize: 'var(--text-sm)' }}>
-                    {errors.marca}
-                  </p>
-                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="categoria">
-                  Categoría <span className="text-destructive">*</span>
+                <Label htmlFor="presentation">
+                  Presentación <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="categoria"
-                  name="categoria"
-                  value={formData.categoria}
+                  id="presentation"
+                  name="presentation"
+                  value={formData.presentation}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Ej: Bebidas"
-                  className={errors.categoria && touched.categoria ? 'border-destructive' : ''}
+                  placeholder="Ej: Botella 2.25L"
+                  className={errors.presentation && touched.presentation ? 'border-destructive' : ''}
                 />
-                {errors.categoria && touched.categoria && (
-                  <p className="text-destructive" style={{ fontSize: 'var(--text-sm)' }}>
-                    {errors.categoria}
-                  </p>
+                {errors.presentation && touched.presentation && (
+                  <p className="text-sm text-destructive">{errors.presentation}</p>
                 )}
               </div>
             </div>
 
             {/* Precio */}
             <div className="space-y-2">
-              <Label htmlFor="precio">
+              <Label htmlFor="price">
                 Precio <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
@@ -285,54 +236,32 @@ export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
                   $
                 </span>
                 <Input
-                  id="precio"
-                  name="precio"
+                  id="price"
+                  name="price"
                   type="number"
                   step="0.01"
-                  value={formData.precio}
+                  value={formData.price}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   placeholder="0.00"
-                  className={`pl-7 ${errors.precio && touched.precio ? 'border-destructive' : ''}`}
+                  className={`pl-7 ${errors.price && touched.price ? 'border-destructive' : ''}`}
                 />
               </div>
-              {errors.precio && touched.precio && (
-                <p className="text-destructive" style={{ fontSize: 'var(--text-sm)' }}>
-                  {errors.precio}
-                </p>
+              {errors.price && touched.price && (
+                <p className="text-sm text-destructive">{errors.price}</p>
               )}
-            </div>
-
-            {/* Estado */}
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
-              <input
-                type="checkbox"
-                id="activo"
-                name="activo"
-                checked={formData.activo}
-                onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
-                className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-ring"
-              />
-              <div className="flex-1">
-                <Label htmlFor="activo" className="cursor-pointer">
-                  Producto activo
-                </Label>
-                <p className="text-muted-foreground" style={{ fontSize: 'var(--text-sm)' }}>
-                  Los productos activos están disponibles para relevamiento
-                </p>
-              </div>
             </div>
           </div>
         </Card>
 
         {/* Actions */}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancelar
           </Button>
-          <Button type="submit" className="gap-2">
+          <Button type="submit" className="gap-2" disabled={isLoading}>
             <Save className="h-4 w-4" />
-            {isEditing ? 'Guardar cambios' : 'Crear producto'}
+            {isLoading ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear producto'}
           </Button>
         </div>
       </form>

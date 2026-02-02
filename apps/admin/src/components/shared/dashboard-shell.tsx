@@ -6,16 +6,15 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
 import { NAVIGATION, ROUTES } from '@/config';
 import { Button } from '@/components/ui/button';
-import { 
-  ShieldCheck, 
-  Users, 
-  Package, 
-  MapPin, 
-  DollarSign, 
-  Menu, 
-  X, 
+import {
+  ShieldCheck,
+  Users,
+  Package,
+  MapPin,
+  DollarSign,
+  Menu,
+  X,
   LogOut,
-  User 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -109,14 +108,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <div className="p-4 border-t border-border">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-accent mb-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                  {user?.name.charAt(0).toUpperCase()}
+                  {user?.fullName?.charAt(0).toUpperCase() ?? 'A'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {user?.name}
+                    {user?.fullName ?? 'Administrador'}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {user?.role}
+                    {user?.type === 'ADMIN' ? 'Administrador' : user?.role ?? 'Usuario'}
                   </p>
                 </div>
               </div>

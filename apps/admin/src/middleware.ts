@@ -17,16 +17,31 @@ const AUTH_ROUTES = ['/login', '/register'];
 const PUBLIC_PREFIXES = ['/api', '/_next', '/favicon.ico', '/images', '/fonts'];
 
 /**
+ * Auth bypass para desarrollo de UI sin API
+ * Activar con NEXT_PUBLIC_AUTH_BYPASS=true en .env.local
+ * NUNCA usar en producción
+ */
+const AUTH_BYPASS =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
+
+/**
  * Middleware de autenticación para Next.js 16
  *
  * Flujo:
- * 1. Si es ruta pública/estática → permitir
- * 2. Si no hay token y ruta protegida → redirigir a login
- * 3. Si hay token y ruta de auth → redirigir a dashboard
- * 4. Si hay token y ruta protegida → permitir
+ * 1. Si AUTH_BYPASS está activo → permitir todo
+ * 2. Si es ruta pública/estática → permitir
+ * 3. Si no hay token y ruta protegida → redirigir a login
+ * 4. Si hay token y ruta de auth → redirigir a dashboard
+ * 5. Si hay token y ruta protegida → permitir
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 0. Auth bypass para desarrollo (NUNCA en producción)
+  if (AUTH_BYPASS) {
+    return NextResponse.next();
+  }
 
   // 1. Rutas estáticas y API siempre permitidas
   if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {

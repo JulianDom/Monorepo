@@ -29,6 +29,7 @@ import {
   ToggleStatusDto,
   ImportProductsDto,
   ImportProductsResponseDto,
+  ToggleStatusDtoValidationLogger,
 } from './dto';
 import { PaginatedResponse } from '@common/dto';
 import { Roles } from '@common/decorators';
@@ -49,7 +50,7 @@ import { JwtAuthGuard } from '@infra/security/authentication';
 @Roles(ActorType.ADMIN)
 @ApiBearerAuth('JWT-auth')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   @Get()
   @ApiOperation({ summary: 'List products with pagination and filters' })
@@ -97,7 +98,19 @@ export class ProductsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ToggleStatusDto,
   ): Promise<Product> {
-    return this.productsService.toggleStatus(id, dto.activate);
+    console.log('🔍 [Backend] Toggle Status Request - ID:', id);
+    console.log('🔍 [Backend] Toggle Status Request - Body:', dto);
+
+    // Log validation details
+    ToggleStatusDtoValidationLogger.validate(dto);
+
+    console.log('🔍 [Backend] Calling service with activate:', dto.activate);
+
+    const result = await this.productsService.toggleStatus(id, dto.activate);
+
+    console.log('✅ [Backend] Toggle Status Success:', result);
+
+    return result;
   }
 
   @Delete(':id')

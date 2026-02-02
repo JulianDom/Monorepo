@@ -18,7 +18,7 @@ interface TypedRequest extends Request {
   url: string;
   body: Record<string, unknown>;
   headers: Record<string, string | string[] | undefined>;
-  ip?: string;
+  ip: string;
 }
 
 interface TypedResponse extends Response {

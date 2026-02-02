@@ -1,31 +1,80 @@
-'use client';
+/**
+ * =============================================================================
+ * PAGINA DE PRODUCTOS - /dashboard/products
+ * =============================================================================
+ *
+ * Esta es la página principal del módulo de productos.
+ * Next.js App Router convierte este archivo en la ruta /dashboard/products
+ *
+ * FLUJO GENERAL:
+ * 1. Usuario entra a /dashboard/products
+ * 2. Se muestra la lista de productos (ProductList)
+ * 3. Usuario puede: crear, editar, activar/desactivar productos
+ * 4. Los cambios de vista se manejan con useState (viewMode)
+ * 5. Los diálogos de confirmación usan el hook useConfirmAction
+ */
+'use client'; // OBLIGATORIO: Indica que este es un Client Component (usa hooks de React)
 
 import { useState } from 'react';
-import { ProductList } from '@/features/products/components/ProductList';
-import { ProductForm } from '@/features/products/components/ProductForm';
-import { ProductImport } from '@/features/products/components/ProductImport';
-import { ImportReport } from '@/features/products/components/ImportReport';
 
-export type Product = {
-  id: string;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  marca: string;
-  categoria: string;
-  precio: number;
-  activo: boolean;
-  fechaCreacion: string;
-  fechaModificacion: string;
-};
+// ============================================================================
+// IMPORTS DE COMPONENTES
+// ============================================================================
+// Estos son los componentes visuales que se renderizan en la página
+import { ProductList } from '@/features/products/components/ProductList';    // Tabla de productos
+import { ProductForm } from '@/features/products/components/ProductForm';    // Formulario crear/editar
+import { ProductImport } from '@/features/products/components/ProductImport'; // Importar desde Excel
+import { ImportReport } from '@/features/products/components/ImportReport';   // Reporte post-importación
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';              // Diálogo de confirmación reutilizable
 
+// ============================================================================
+// IMPORTS DE HOOKS
+// ============================================================================
+// useConfirmAction: Maneja el estado del diálogo de confirmación (abrir/cerrar/confirmar)
+// getConfirmDialogTexts: Genera los textos del diálogo según el tipo de acción
+import { useConfirmAction, getConfirmDialogTexts } from '@/hooks';
+
+// ============================================================================
+// IMPORTS DEL FEATURE (SERVICIO + HOOKS + TIPOS)
+// ============================================================================
+// Estos vienen del archivo features/products/index.ts que usa los factories
+// - useProducts: Hook para obtener la lista de productos (React Query)
+// - useCreateProduct: Hook para crear un producto (mutation)
+// - useUpdateProduct: Hook para actualizar un producto (mutation)
+// - useToggleProductStatus: Hook para activar/desactivar (mutation)
+// - Product, CreateProductDTO, UpdateProductDTO: Tipos TypeScript
+import {
+  useProducts,
+  useCreateProduct,
+  useUpdateProduct,
+  useToggleProductStatus,
+  type Product,
+  type CreateProductDTO,
+  type UpdateProductDTO,
+} from '@/features/products';
+
+// ============================================================================
+// TIPOS LOCALES
+// ============================================================================
+
+/**
+ * ProductView define las vistas posibles de esta página:
+ * - 'list': Muestra la tabla de productos
+ * - 'create': Muestra el formulario vacío para crear
+ * - 'edit': Muestra el formulario con datos para editar
+ * - 'import': Muestra la pantalla de importación Excel
+ * - 'report': Muestra el reporte después de importar
+ */
 export type ProductView = 'list' | 'create' | 'edit' | 'import' | 'report';
 
+/**
+ * ImportResult: Resultado de una importación de Excel
+ */
 export type ImportResult = {
-  total: number;
-  exitosos: number;
-  errores: number;
-  registros: ImportRecord[];
+  total: number;       // Total de registros procesados
+  exitosos: number;    // Cantidad exitosos
+  errores: number;     // Cantidad con errores
+  registros: ImportRecord[]; // Detalle de cada registro
 };
 
 export type ImportRecord = {
@@ -36,164 +85,279 @@ export type ImportRecord = {
   mensaje?: string;
 };
 
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    codigo: 'PROD-001',
-    nombre: 'Coca Cola 2.25L',
-    descripcion: 'Bebida gaseosa sabor cola',
-    marca: 'Coca Cola',
-    categoria: 'Bebidas',
-    precio: 350.50,
-    activo: true,
-    fechaCreacion: '2024-01-15T10:00:00Z',
-    fechaModificacion: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    codigo: 'PROD-002',
-    nombre: 'Leche La Serenísima 1L',
-    descripcion: 'Leche entera fortificada',
-    marca: 'La Serenísima',
-    categoria: 'Lácteos',
-    precio: 280.00,
-    activo: true,
-    fechaCreacion: '2024-01-16T11:30:00Z',
-    fechaModificacion: '2024-01-16T11:30:00Z',
-  },
-  {
-    id: '3',
-    codigo: 'PROD-003',
-    nombre: 'Pan Lactal Bimbo',
-    descripcion: 'Pan de molde blanco',
-    marca: 'Bimbo',
-    categoria: 'Panadería',
-    precio: 420.00,
-    activo: false,
-    fechaCreacion: '2024-01-14T09:15:00Z',
-    fechaModificacion: '2024-01-20T14:30:00Z',
-  },
-  {
-    id: '4',
-    codigo: 'PROD-004',
-    nombre: 'Aceite Cocinero 900ml',
-    descripcion: 'Aceite de girasol alto oleico',
-    marca: 'Cocinero',
-    categoria: 'Almacén',
-    precio: 890.00,
-    activo: true,
-    fechaCreacion: '2024-01-17T13:20:00Z',
-    fechaModificacion: '2024-01-17T13:20:00Z',
-  },
-  {
-    id: '5',
-    codigo: 'PROD-005',
-    nombre: 'Arroz Gallo Oro 1kg',
-    descripcion: 'Arroz tipo doble carolina',
-    marca: 'Gallo Oro',
-    categoria: 'Almacén',
-    precio: 520.00,
-    activo: true,
-    fechaCreacion: '2024-01-18T16:45:00Z',
-    fechaModificacion: '2024-01-18T16:45:00Z',
-  },
-];
+// ============================================================================
+// COMPONENTE PRINCIPAL DE LA PÁGINA
+// ============================================================================
 
+/**
+ * ProductsPage es el componente que Next.js renderiza cuando
+ * el usuario navega a /dashboard/products
+ *
+ * Por convención de Next.js App Router, el archivo debe:
+ * - Llamarse page.tsx
+ * - Exportar un componente como default
+ */
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  // ==========================================================================
+  // ESTADO LOCAL (useState)
+  // ==========================================================================
+
+  /**
+   * currentView: Controla qué vista se muestra
+   * - Inicia en 'list' (tabla de productos)
+   * - Cambia a 'create'/'edit' cuando el usuario hace click en crear/editar
+   */
   const [currentView, setCurrentView] = useState<ProductView>('list');
+
+  /**
+   * selectedProduct: Almacena el producto seleccionado para editar
+   * - Es null cuando creamos uno nuevo
+   * - Contiene el producto cuando editamos uno existente
+   */
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  /**
+   * importResult: Almacena el resultado de la última importación
+   * - Se usa para mostrar el reporte después de importar
+   */
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
+  // ==========================================================================
+  // HOOKS DE REACT QUERY (Server State)
+  // ==========================================================================
+  // Estos hooks vienen del factory createCrudHooksWithStatus
+  // Se encargan de: hacer peticiones HTTP, cachear datos, manejar loading/error
+
+  /**
+   * useProducts(): Obtiene la lista de productos
+   * - data: Contiene { data: Product[], total: number, ... }
+   * - isLoading: true mientras carga
+   * - error: Contiene el error si falla
+   * - Automáticamente cachea los datos y los refresca
+   */
+  const { data: productsData, isLoading } = useProducts();
+
+  /**
+   * useCreateProduct(): Mutation para crear productos
+   * - createProduct.mutate(data): Ejecuta la petición POST
+   * - createProduct.isPending: true mientras se envía
+   * - Automáticamente invalida el cache al completar
+   */
+  const createProduct = useCreateProduct();
+
+  /**
+   * useUpdateProduct(): Mutation para actualizar productos
+   * - updateProduct.mutate({ id, data }): Ejecuta PUT /products/:id
+   */
+  const updateProduct = useUpdateProduct();
+
+  /**
+   * useToggleProductStatus(): Mutation para activar/desactivar
+   * - toggleStatus.mutate({ id, enable }): Ejecuta PATCH /products/:id/status
+   * - IMPORTANTE: El parámetro se llama "enable", NO "active"
+   */
+  const toggleStatus = useToggleProductStatus();
+
+  /**
+   * Extraemos el array de productos de la respuesta
+   * - Si no hay datos todavía, usamos array vacío
+   * - El operador ?? es "nullish coalescing" (valor por defecto si es null/undefined)
+   */
+  const products = productsData?.data ?? [];
+
+  // ==========================================================================
+  // HOOK useConfirmAction (Diálogo de Confirmación)
+  // ==========================================================================
+
+  /**
+   * useConfirmAction: Hook personalizado que maneja:
+   * - El estado del diálogo (abierto/cerrado)
+   * - El item seleccionado para la acción
+   * - El tipo de acción (toggle/delete)
+   *
+   * Retorna:
+   * - confirmState: Estado actual { isOpen, type, item }
+   * - requestToggle: Función para abrir el diálogo de toggle
+   * - cancel: Función para cerrar el diálogo
+   * - confirm: Función para confirmar la acción
+   */
+  const {
+    confirmState,
+    requestToggle,
+    cancel,
+    confirm,
+  } = useConfirmAction<Product>({
+    /**
+     * onToggle: Se ejecuta cuando el usuario confirma el toggle
+     * @param id - ID del producto
+     * @param currentActive - Estado actual (true = activo, false = inactivo)
+     *
+     * IMPORTANTE: Usamos "enable: !currentActive" para invertir el estado
+     * El factory mapea "enable" → "activate" para el backend
+     */
+    onToggle: (id, currentActive) => {
+      toggleStatus.mutate({ id, enable: !currentActive });
+    },
+  });
+
+  /**
+   * getConfirmDialogTexts: Genera los textos del diálogo dinámicamente
+   * @param type - Tipo de acción ('toggle' | 'delete')
+   * @param item - El producto seleccionado (o null)
+   * @param entityName - Nombre de la entidad para los textos
+   * @param getItemName - Función para obtener el nombre a mostrar
+   *
+   * Retorna: { title, description, confirmText, isDestructive }
+   */
+  const dialogTexts = getConfirmDialogTexts(
+    confirmState.type,           // 'toggle' en este caso
+    confirmState.item,           // El producto seleccionado
+    'Producto',                  // "¿Desactivar Producto?"
+    (product) => product.name    // Usa el nombre del producto en el mensaje
+  );
+
+  // ==========================================================================
+  // HANDLERS (Funciones que manejan eventos)
+  // ==========================================================================
+
+  /**
+   * handleCreateProduct: Abre el formulario vacío para crear
+   */
   const handleCreateProduct = () => {
-    setSelectedProduct(null);
-    setCurrentView('create');
+    setSelectedProduct(null);      // Sin producto seleccionado = crear nuevo
+    setCurrentView('create');      // Cambia a vista de formulario
   };
 
+  /**
+   * handleEditProduct: Abre el formulario con datos para editar
+   * @param product - El producto a editar
+   */
   const handleEditProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setCurrentView('edit');
+    setSelectedProduct(product);   // Guarda el producto a editar
+    setCurrentView('edit');        // Cambia a vista de formulario
   };
 
-  const handleSaveProduct = (product: Omit<Product, 'id' | 'fechaCreacion' | 'fechaModificacion'>) => {
-    const now = new Date().toISOString();
-
-    if (selectedProduct) {
-      setProducts(products.map(p =>
-        p.id === selectedProduct.id
-          ? { ...product, id: p.id, fechaCreacion: p.fechaCreacion, fechaModificacion: now }
-          : p
-      ));
-    } else {
-      const newProduct: Product = {
-        ...product,
-        id: `${Date.now()}`,
-        fechaCreacion: now,
-        fechaModificacion: now,
-      };
-      setProducts([newProduct, ...products]);
+  /**
+   * handleSaveProduct: Guarda el producto (crear o actualizar)
+   * @param data - Datos del formulario
+   *
+   * Determina si crear o actualizar según currentView
+   */
+  const handleSaveProduct = (data: CreateProductDTO | UpdateProductDTO) => {
+    if (currentView === 'create') {
+      // CREAR: POST /products
+      createProduct.mutate(data as CreateProductDTO, {
+        onSuccess: () => {
+          // Después de crear exitosamente, volver a la lista
+          setCurrentView('list');
+          setSelectedProduct(null);
+        },
+      });
+    } else if (currentView === 'edit' && selectedProduct) {
+      // ACTUALIZAR: PUT /products/:id
+      updateProduct.mutate(
+        { id: selectedProduct.id, data: data as UpdateProductDTO },
+        {
+          onSuccess: () => {
+            // Después de actualizar, volver a la lista
+            setCurrentView('list');
+            setSelectedProduct(null);
+          },
+        }
+      );
     }
-
-    setCurrentView('list');
-    setSelectedProduct(null);
   };
 
-  const handleToggleActive = (productId: string) => {
-    setProducts(products.map(p =>
-      p.id === productId
-        ? { ...p, activo: !p.activo, fechaModificacion: new Date().toISOString() }
-        : p
-    ));
-  };
-
+  /**
+   * handleImport: Abre la vista de importación
+   */
   const handleImport = () => {
     setCurrentView('import');
   };
 
+  /**
+   * handleImportComplete: Después de importar, muestra el reporte
+   * @param result - Resultado de la importación
+   */
   const handleImportComplete = (result: ImportResult) => {
     setImportResult(result);
     setCurrentView('report');
   };
 
+  /**
+   * handleBackToList: Vuelve a la lista desde cualquier vista
+   */
   const handleBackToList = () => {
     setCurrentView('list');
     setSelectedProduct(null);
     setImportResult(null);
   };
 
+  // ==========================================================================
+  // RENDER (JSX)
+  // ==========================================================================
+
   return (
     <>
+      {/* ================================================================== */}
+      {/* VISTA: LISTA DE PRODUCTOS */}
+      {/* ================================================================== */}
       {currentView === 'list' && (
         <ProductList
-          products={products}
-          onCreateProduct={handleCreateProduct}
-          onEditProduct={handleEditProduct}
-          onToggleActive={handleToggleActive}
-          onImport={handleImport}
+          products={products}              // Array de productos a mostrar
+          isLoading={isLoading}            // Muestra skeleton mientras carga
+          onCreateProduct={handleCreateProduct}  // Click en "Nuevo Producto"
+          onEditProduct={handleEditProduct}      // Click en botón editar
+          onToggleActive={requestToggle}         // Click en botón activar/desactivar
+          onImport={handleImport}                // Click en "Importar Excel"
         />
       )}
 
+      {/* ================================================================== */}
+      {/* VISTA: FORMULARIO (crear o editar) */}
+      {/* ================================================================== */}
       {(currentView === 'create' || currentView === 'edit') && (
         <ProductForm
-          product={selectedProduct}
-          onSave={handleSaveProduct}
-          onCancel={handleBackToList}
+          product={selectedProduct}                                    // null = crear, objeto = editar
+          onSave={handleSaveProduct}                                   // Guardar formulario
+          onCancel={handleBackToList}                                  // Cancelar y volver
+          isLoading={createProduct.isPending || updateProduct.isPending} // Deshabilitar mientras guarda
         />
       )}
 
+      {/* ================================================================== */}
+      {/* VISTA: IMPORTACIÓN */}
+      {/* ================================================================== */}
       {currentView === 'import' && (
         <ProductImport
-          onImportComplete={handleImportComplete}
-          onCancel={handleBackToList}
+          onImportComplete={handleImportComplete}  // Cuando termina la importación
+          onCancel={handleBackToList}              // Cancelar
         />
       )}
 
+      {/* ================================================================== */}
+      {/* VISTA: REPORTE DE IMPORTACIÓN */}
+      {/* ================================================================== */}
       {currentView === 'report' && importResult && (
         <ImportReport
-          result={importResult}
-          onBack={handleBackToList}
+          result={importResult}      // Datos del reporte
+          onBack={handleBackToList}  // Volver a la lista
         />
       )}
+
+      {/* ================================================================== */}
+      {/* DIÁLOGO DE CONFIRMACIÓN */}
+      {/* ================================================================== */}
+      {/* Este diálogo siempre está en el DOM pero solo se muestra cuando isOpen=true */}
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}   // Controla si se muestra
+        onClose={cancel}               // Cerrar sin confirmar
+        onConfirm={confirm}            // Confirmar la acción
+        title={dialogTexts.title}      // "¿Desactivar Producto?" o "¿Activar Producto?"
+        description={dialogTexts.description}  // Mensaje explicativo
+        confirmText={dialogTexts.confirmText}  // "Desactivar" o "Activar"
+        variant={dialogTexts.isDestructive ? 'destructive' : 'default'} // Rojo si es destructivo
+      />
     </>
   );
 }
