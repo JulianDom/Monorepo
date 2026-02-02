@@ -1,32 +1,48 @@
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle, X, Loader2 } from 'lucide-react';
 import { Button } from './button';
 
 interface ConfirmDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  // Soporta ambas variantes de props
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
   onConfirm: () => void;
   title: string;
   description: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: 'default' | 'destructive';
+  isLoading?: boolean;
 }
 
 export function ConfirmDialog({
   isOpen,
+  open,
   onClose,
+  onOpenChange,
   onConfirm,
   title,
   description,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   variant = 'default',
+  isLoading = false,
 }: ConfirmDialogProps) {
-  if (!isOpen) return null;
+  // Soporta ambas variantes: isOpen o open
+  const isDialogOpen = isOpen ?? open ?? false;
+
+  // Soporta ambas variantes: onClose o onOpenChange
+  const handleClose = () => {
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+  };
+
+  if (!isDialogOpen) return null;
 
   const handleConfirm = () => {
     onConfirm();
-    onClose();
+    // No cerramos aquí, dejamos que el padre controle cuando cerrar (ej: después de mutación exitosa)
   };
 
   return (
@@ -34,7 +50,7 @@ export function ConfirmDialog({
       {/* Overlay */}
       <div
         className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={isLoading ? undefined : handleClose}
       />
 
       {/* Dialog */}
@@ -57,8 +73,9 @@ export function ConfirmDialog({
               </div>
             </div>
             <button
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
@@ -73,7 +90,8 @@ export function ConfirmDialog({
           <div className="flex flex-col-reverse md:flex-row gap-3 justify-end">
             <Button
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isLoading}
               className="w-full md:w-auto"
             >
               {cancelText}
@@ -81,8 +99,10 @@ export function ConfirmDialog({
             <Button
               variant={variant === 'destructive' ? 'destructive' : 'default'}
               onClick={handleConfirm}
-              className="w-full md:w-auto"
+              disabled={isLoading}
+              className="w-full md:w-auto gap-2"
             >
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
               {confirmText}
             </Button>
           </div>

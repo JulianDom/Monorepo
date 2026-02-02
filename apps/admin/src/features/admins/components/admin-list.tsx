@@ -15,7 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/shared/pagination';
 import { useDataTable, useDebounce } from '@/hooks';
-import type { Admin } from '../types';
+import type { Admin } from '@framework/shared-types';
 
 // ============================================
 // TIPOS

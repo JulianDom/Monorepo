@@ -61,7 +61,7 @@ export function OperativeList({
     data: operatives,
     searchFields: ['fullName', 'emailAddress', 'username'],
     defaultSort: { field: 'fullName', direction: 'asc' },
-    filterOptions: { field: 'active' },
+    filterOptions: { field: 'enabled' },
     defaultFilter: 'all',
     itemsPerPage: 10,
   });
@@ -174,7 +174,7 @@ export function OperativeList({
                 </TableRow>
               ) : (
                 items.map((operative) => {
-                  const isActive = operative.active !== false;
+                  const isActive = operative.enabled !== false;
                   return (
                     <TableRow 
                       key={operative.id}
