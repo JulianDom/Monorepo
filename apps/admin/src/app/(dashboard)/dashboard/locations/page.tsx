@@ -122,7 +122,7 @@ export default function LocationsPage() {
   };
 
   const handleToggleStatus = (store: Store) => {
-    requestToggle(store, store.active);
+    requestToggle(store);
   };
 
   const handleImportComplete = (result: ImportResult) => {
