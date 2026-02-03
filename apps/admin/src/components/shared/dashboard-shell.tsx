@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { NAVIGATION, ROUTES } from '@/config';
 import { Button } from '@/components/ui/button';
 import {
+  LayoutDashboard,
   ShieldCheck,
   Users,
   Package,
@@ -19,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const iconMap: Record<string, any> = {
+  LayoutDashboard,
   ShieldCheck,
   Users,
   Package,

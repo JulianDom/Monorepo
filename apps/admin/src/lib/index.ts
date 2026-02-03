@@ -4,16 +4,17 @@ export { apiClient } from './api-client';
 // Utilities
 export { cn } from './utils';
 
-// URL Search Params (nuqs)
+// URL Search Params helpers
 export {
-  tableSearchParams,
-  searchParamsCache,
-  type TableSearchParams,
-  type ApiFilterParams,
+  getSearchParam,
+  getSearchParamNumber,
+  getSearchParamBoolean,
+  createSearchParams,
+  updateSearchParams,
 } from './search-params';
 
 // Service Factory
-export { createApiService, type ApiService } from './create-api-service';
+export { createApiService, type CrudService } from './create-api-service';
 
 // SEO
 export { generatePageMetadata, rootMetadata } from './seo';

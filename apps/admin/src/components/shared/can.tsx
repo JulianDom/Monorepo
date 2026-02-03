@@ -27,6 +27,22 @@ export function Can({ permission, fallback = null, children, requireAll = false 
 }
 
 /**
+ * Componente inverso de Can
+ * Renderiza children solo si el usuario NO tiene los permisos
+ */
+export function Cannot({ permission, fallback = null, children, requireAll = false }: CanProps) {
+  const { can, canAny, canAll } = usePermissions();
+
+  const hasPermission = Array.isArray(permission)
+    ? requireAll
+      ? canAll(permission)
+      : canAny(permission)
+    : can(permission);
+
+  return <>{!hasPermission ? children : fallback}</>;
+}
+
+/**
  * Ejemplo de uso:
  * 
  * // Renderizar solo para admins

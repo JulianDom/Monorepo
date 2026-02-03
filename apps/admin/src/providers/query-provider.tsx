@@ -32,7 +32,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {env.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+      {env.isDev && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

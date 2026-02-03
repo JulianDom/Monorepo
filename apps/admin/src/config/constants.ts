@@ -75,14 +75,15 @@ export const ENDPOINTS = {
     REFRESH: '/auth/refresh',
     ME: '/auth/me',
   },
+  DASHBOARD: {
+    STATS: '/dashboard/stats',
+  },
   USERS: '/users',
   ADMINS: '/administrators',
   PRODUCTS: '/products',
   STORES: '/stores',
   OPERATIVE_USERS: '/operative-users',
   PRICE_RECORDS: '/price-records',
-  
-  // Agregar más endpoints según necesidad
 } as const;
 
 // ============================================

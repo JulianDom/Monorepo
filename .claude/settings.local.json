@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(pnpm install)",
-      "Bash(pnpm --dir \"c:/Users/Julian/Documents/Cervak/Framework_1/packages/shared-utils\" build)"
+      "Bash(pnpm --dir \"c:/Users/Julian/Documents/Cervak/Framework_1/packages/shared-utils\" build)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next build:*)",
+      "Bash(pnpm build:*)",
+      "Bash(where:*)",
+      "Bash(\"/c/Users/Julian/AppData/Local/pnpm/pnpm\" --version)",
+      "Bash(npm --version:*)",
+      "Bash(npm run build:*)",
+      "Bash(pnpm prisma generate:*)",
+      "Bash(ls:*)"
     ]
   }
 }

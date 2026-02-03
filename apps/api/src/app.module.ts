@@ -13,6 +13,7 @@ import { ProductsModule } from '@modules/products';
 import { StoresModule } from '@modules/stores';
 import { OperativeUsersModule } from '@modules/operative-users';
 import { PriceRecordsModule } from '@modules/price-records';
+import { DashboardModule } from '@modules/dashboard';
 
 // Modulos existentes (pendientes de migracion)
 import { AuthModule } from '@infra/security/auth.module';
@@ -42,6 +43,7 @@ import { ProvidersModule } from '@infra/providers';
     StoresModule,
     OperativeUsersModule,
     PriceRecordsModule,
+    DashboardModule,
 
     // Modulos pendientes de migracion
     AdministratorsPresentationModule,
@@ -62,4 +64,4 @@ import { ProvidersModule } from '@infra/providers';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

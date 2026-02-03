@@ -64,6 +64,12 @@ export const PROTECTED_ROUTES = [
  */
 export const NAVIGATION = [
   {
+    title: 'Dashboard',
+    href: ROUTES.DASHBOARD,
+    icon: 'LayoutDashboard',
+    description: 'Resumen general del sistema',
+  },
+  {
     title: 'Administradores',
     href: ROUTES.ADMINS,
     icon: 'ShieldCheck',

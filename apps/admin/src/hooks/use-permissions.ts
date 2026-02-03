@@ -24,8 +24,8 @@ export function usePermissions() {
    * Verifica si el usuario tiene un permiso específico
    */
   const can = (permission: Permission): boolean => {
-    if (!user) return false;
-    
+    if (!user || !user.role) return false;
+
     const userPermissions = rolePermissions[user.role] || [];
     return userPermissions.includes(permission);
   };

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { UseQueryResult } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface QueryCellProps<TData> {
   query: UseQueryResult<TData, Error>;
@@ -67,6 +68,46 @@ export function QueryCell<TData>({
 
   // Success state
   return <>{data ? children(data) : null}</>;
+}
+
+/**
+ * Loading component for table rows
+ */
+export function QueryCellTableLoading({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center space-x-4 p-4">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 flex-1" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-8 w-8" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Loading component for cards
+ */
+export function QueryCellCardLoading({ cards = 3 }: { cards?: number }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: cards }).map((_, i) => (
+        <div key={i} className="rounded-lg border p-6 space-y-4">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+          <div className="flex justify-end space-x-2">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-8 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /**

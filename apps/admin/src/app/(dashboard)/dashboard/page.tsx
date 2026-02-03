@@ -1,43 +1,89 @@
+'use client';
+
 import { PageShell } from '@/components/shared/page-shell';
 import { Card } from '@/components/ui/card';
-import { ShieldCheck, Users, Package, MapPin, DollarSign, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ShieldCheck, Users, Package, MapPin, DollarSign } from 'lucide-react';
+import { useDashboardStats } from '@/features/dashboard';
+
+function formatNumber(num: number): string {
+  return num.toLocaleString('es-AR');
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  description,
+  isLoading,
+}: {
+  title: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  isLoading?: boolean;
+}) {
+  return (
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">{title}</p>
+        {isLoading ? (
+          <Skeleton className="h-9 w-20 mb-2" />
+        ) : (
+          <p className="text-3xl font-bold text-foreground mb-2">{value}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+    </Card>
+  );
+}
 
 export default function DashboardPage() {
-  const stats = [
+  const { data: stats, isLoading } = useDashboardStats();
+
+  const statCards = [
     {
       title: 'Administradores',
-      value: '12',
+      value: stats ? formatNumber(stats.admins.active) : '0',
       icon: ShieldCheck,
-      description: 'Activos en el sistema',
-      trend: '+2 este mes',
+      description: stats
+        ? `${formatNumber(stats.admins.active)} de ${formatNumber(stats.admins.total)} activos`
+        : 'Cargando...',
     },
     {
       title: 'Usuarios Operativos',
-      value: '45',
+      value: stats ? formatNumber(stats.operatives.active) : '0',
       icon: Users,
-      description: 'Usuarios activos',
-      trend: '+5 este mes',
+      description: stats
+        ? `${formatNumber(stats.operatives.active)} de ${formatNumber(stats.operatives.total)} activos`
+        : 'Cargando...',
     },
     {
       title: 'Productos',
-      value: '1,234',
+      value: stats ? formatNumber(stats.products.total) : '0',
       icon: Package,
-      description: 'En catálogo',
-      trend: '+123 este mes',
+      description: stats
+        ? `${formatNumber(stats.products.active)} activos en catálogo`
+        : 'Cargando...',
     },
     {
       title: 'Locales',
-      value: '89',
+      value: stats ? formatNumber(stats.stores.total) : '0',
       icon: MapPin,
-      description: 'Puntos de venta',
-      trend: '+3 este mes',
+      description: stats
+        ? `${formatNumber(stats.stores.active)} puntos de venta activos`
+        : 'Cargando...',
     },
     {
       title: 'Precios Registrados',
-      value: '15,678',
+      value: stats ? formatNumber(stats.priceRecords.total) : '0',
       icon: DollarSign,
       description: 'Total de registros',
-      trend: '+1,234 este mes',
     },
   ];
 
@@ -48,27 +94,16 @@ export default function DashboardPage() {
     >
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title} className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-                <p className="text-3xl font-bold text-foreground mb-2">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.description}</p>
-                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  {stat.trend}
-                </p>
-              </div>
-            </Card>
-          );
-        })}
+        {statCards.map((stat) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            description={stat.description}
+            isLoading={isLoading}
+          />
+        ))}
       </div>
 
       {/* Welcome Message */}

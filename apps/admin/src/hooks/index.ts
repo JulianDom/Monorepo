@@ -14,10 +14,6 @@
  * - useDataTable: Para tablas con busqueda, filtro, sort, paginacion
  * - useConfirmAction: Para dialogos de confirmacion de acciones
  * - useDebounce: Para debounce de valores
- *
- * HOOKS LEGACY (solo en _example/, no usar en nuevos features):
- * - useStandardTable: Reemplazado por useDataTable
- * - useStandardMutation: Reemplazado por factories (createCrudHooksWithStatus)
  */
 
 // =============================================================================
@@ -50,12 +46,6 @@ export {
   type UseDataTableReturn,
 } from './use-data-table';
 
-/**
- * @deprecated Usar useDataTable en su lugar
- * Solo se mantiene por compatibilidad con _example/
- */
-export { useStandardTable } from './use-standard-table';
-
 // =============================================================================
 // DIALOGOS DE CONFIRMACION (patron actual: useConfirmAction)
 // =============================================================================
@@ -86,32 +76,10 @@ export {
 export { useConfirm, confirmPresets, type ConfirmState } from './use-confirm';
 
 // =============================================================================
-// MUTATIONS (patron actual: factories en cada feature)
-// =============================================================================
-
-/**
- * @deprecated Las mutations ahora se generan con createCrudHooksWithStatus
- * en cada feature (ej: useCreateProduct, useUpdateProduct).
- * Solo se mantiene por compatibilidad con _example/
- */
-export {
-  useStandardMutation,
-  useCreateMutation,
-  useUpdateMutation,
-  useDeleteMutation,
-} from './use-standard-mutation';
-
-// =============================================================================
 // NOTIFICACIONES
 // =============================================================================
 
 export { useNotify, successMessages, errorMessages } from './use-notify';
-
-// =============================================================================
-// FORMULARIOS
-// =============================================================================
-
-export { useStandardForm, type StandardForm } from './use-standard-form';
 
 // =============================================================================
 // OTROS HOOKS UTILES
@@ -121,13 +89,4 @@ export { useStandardForm, type StandardForm } from './use-standard-form';
 export { useTheme } from './use-theme';
 
 // Permisos
-export { usePermissions, type Role } from './use-permissions';
-
-// Scroll infinito
-export { useInfiniteList } from './use-infinite-list';
-
-// Upload de archivos
-export { useFileUpload } from './use-file-upload';
-
-// Internacionalizacion
-export { useTranslations, getTranslation } from './use-translations';
+export { usePermissions, type Permission } from './use-permissions';

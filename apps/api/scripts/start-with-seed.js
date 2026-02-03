@@ -1,13 +1,28 @@
 const { spawn } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
+require('dotenv/config');
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error('❌ DATABASE_URL environment variable is not set');
+  process.exit(1);
+}
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function startWithSeed() {
   try {
     console.log('🔍 Verificando si existen administradores...');
 
-    const adminCount = await prisma.admin.count();
+    const adminCount = await prisma.administrator.count();
+
+    // Cerrar conexión de Prisma después de la verificación
+    await prisma.$disconnect();
+    await pool.end();
 
     if (adminCount === 0) {
       console.log('📱 No hay administradores, ejecutando seed...');
